@@ -2,30 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
-    function hasRole(role) { return signedIn() && profile().data.role == role; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
 
     match /users/{userId} {
       allow read: if signedIn();
       allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if signedIn() && request.auth.uid == userId
-        && request.resource.data.role == resource.data.role;
+      allow update: if signedIn() && request.auth.uid == userId;
     }
 
     match /chores/{choreId} {
       allow read: if signedIn();
-      allow write: if hasRole('servant');
+      allow write: if isAdmin();
     }
 
     match /cards/{cardId} {
       allow read: if signedIn();
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.status == 'requested';
-      allow update: if hasRole('servant') || hasRole('hand')
-        || (signedIn() && resource.data.ownerId == request.auth.uid
-          && resource.data.status == 'assigned'
-          && request.resource.data.status == 'completed');
+        && request.resource.data.status == 'assigned';
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid
+        && (
+          (resource.data.status == 'assigned'
+            && request.resource.data.status == 'completed')
+          || (resource.data.status == 'completed'
+            && request.resource.data.status == 'approved')
+        );
     }
 
     match /chronicle/{eventId} {
@@ -35,7 +36,7 @@ service cloud.firestore {
 
     match /payouts/{payoutId} {
       allow read: if signedIn();
-      allow write: if hasRole('hand');
+      allow write: if false;
     }
   }
 }

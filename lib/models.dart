@@ -1,13 +1,3 @@
-enum MansionRole { player, servant, hand }
-
-extension MansionRoleLabel on MansionRole {
-  String get label => switch (this) {
-    MansionRole.player => 'Hráč',
-    MansionRole.servant => 'Služebník',
-    MansionRole.hand => 'Ruka',
-  };
-}
-
 enum ChoreDifficulty { easy, medium, hard, special }
 
 extension ChoreDifficultyLabel on ChoreDifficulty {
@@ -19,7 +9,7 @@ extension ChoreDifficultyLabel on ChoreDifficulty {
   };
 }
 
-enum ChoreStatus { available, requested, assigned, completed, approved, paid }
+enum ChoreStatus { available, assigned, completed, approved, paid }
 
 class ChoreDefinition {
   const ChoreDefinition({
@@ -28,6 +18,7 @@ class ChoreDefinition {
     required this.reward,
     required this.difficulty,
     required this.symbol,
+    required this.minutes,
     this.note,
     this.weeklyLimit,
   });
@@ -37,6 +28,7 @@ class ChoreDefinition {
   final int reward;
   final ChoreDifficulty difficulty;
   final String symbol;
+  final int minutes;
   final String? note;
   final int? weeklyLimit;
 }
@@ -47,14 +39,18 @@ class ChoreCard {
     required this.chore,
     this.status = ChoreStatus.available,
     this.owner,
-    this.updatedAt,
+    this.takenAt,
+    this.completedAt,
+    this.accountedAt,
   });
 
   final String id;
   final ChoreDefinition chore;
   ChoreStatus status;
   String? owner;
-  DateTime? updatedAt;
+  DateTime? takenAt;
+  DateTime? completedAt;
+  DateTime? accountedAt;
 }
 
 class ChronicleEvent {
@@ -63,12 +59,16 @@ class ChronicleEvent {
     required this.message,
     required this.createdAt,
     required this.symbol,
+    this.cardId,
+    this.cardTitle,
   });
 
   final String actor;
   final String message;
   final DateTime createdAt;
   final String symbol;
+  final String? cardId;
+  final String? cardTitle;
 }
 
 enum PlayerLevel { bronze, silver, gold, platinum }

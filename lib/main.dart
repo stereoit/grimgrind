@@ -1,21 +1,23 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'mansion_store.dart';
 import 'models.dart';
 
-void main() => runApp(const ChoreCashApp());
+void main() => runApp(const GrimGrindApp());
 
-class ChoreCashApp extends StatefulWidget {
-  const ChoreCashApp({super.key, this.store});
+class GrimGrindApp extends StatefulWidget {
+  const GrimGrindApp({super.key, this.store});
 
   final MansionStore? store;
 
   @override
-  State<ChoreCashApp> createState() => _ChoreCashAppState();
+  State<GrimGrindApp> createState() => _GrimGrindAppState();
 }
 
-class _ChoreCashAppState extends State<ChoreCashApp> {
+class _GrimGrindAppState extends State<GrimGrindApp> {
   late final MansionStore store = widget.store ?? MansionStore();
 
   @override
@@ -28,7 +30,7 @@ class _ChoreCashAppState extends State<ChoreCashApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'ChoreCash',
+      title: 'GrimGrind',
       theme: _theme,
       home: MansionShell(store: store),
     );
@@ -106,7 +108,7 @@ class _MansionShellState extends State<MansionShell> {
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CHORECASH', style: TextStyle(letterSpacing: 3, fontSize: 19)),
+            Text('GRIMGRIND', style: TextStyle(letterSpacing: 3, fontSize: 19)),
             Text(
               'SÍDLO POVINNOSTÍ',
               style: TextStyle(
@@ -117,26 +119,10 @@ class _MansionShellState extends State<MansionShell> {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<MansionRole>(
-            tooltip: 'Změnit roli',
-            initialValue: widget.store.role,
-            onSelected: widget.store.setRole,
-            itemBuilder: (_) => MansionRole.values
-                .map(
-                  (role) => PopupMenuItem(value: role, child: Text(role.label)),
-                )
-                .toList(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Row(
-                children: [
-                  const Icon(Icons.person_outline, size: 19),
-                  const SizedBox(width: 8),
-                  Text(widget.store.role.label),
-                ],
-              ),
-            ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 18),
+            child: Icon(Icons.nightlight_round, color: Color(0xFFC6A15B)),
           ),
         ],
       ),
@@ -179,29 +165,22 @@ class HallPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isServant = store.role == MansionRole.servant;
-    final active = isServant
-        ? store.pendingRequests.toList()
-        : store.assignedCards.toList();
+    final active = store.tableCards.toList();
     return CustomScrollView(
       key: const PageStorageKey('hall'),
       slivers: [
-        SliverToBoxAdapter(
-          child: _PageHeading(
-            eyebrow: isServant ? 'SLUŽEBNICKÁ KOMNATA' : 'VELKÝ SÁL',
-            title: isServant ? 'Žádosti o vydání' : 'Vyber si svůj osud',
-            subtitle: isServant
-                ? 'Schval karty, které si hráči vyžádali.'
-                : 'Požádej Služebníka o kartu a získej odměnu.',
-          ),
-        ),
+        const SliverToBoxAdapter(child: _HallHero()),
         if (active.isNotEmpty) ...[
           const SliverToBoxAdapter(child: _SectionTitle('PRÁVĚ VE HŘE')),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 22),
             sliver: SliverList.builder(
               itemCount: active.length,
-              itemBuilder: (_, i) => _ActiveCard(store: store, card: active[i]),
+              itemBuilder: (_, i) => _ActiveCard(
+                store: store,
+                card: active[i],
+                canComplete: active[i].owner == store.nickname,
+              ),
             ),
           ),
         ],
@@ -211,29 +190,18 @@ class HallPage extends StatelessWidget {
           sliver: SliverGrid.builder(
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 260,
-              mainAxisExtent: 252,
+              mainAxisExtent: 292,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
             itemCount: store.availableCards.length,
             itemBuilder: (_, i) => ChoreCardView(
               card: store.availableCards.elementAt(i),
-              onPressed: store.role == MansionRole.player
-                  ? () {
-                      final accepted = store.requestCard(
-                        store.availableCards.elementAt(i),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            accepted
-                                ? 'Žádost byla odeslána Služebníkovi.'
-                                : 'Tato karta zatím není dostupná.',
-                          ),
-                        ),
-                      );
-                    }
-                  : null,
+              onPressed: () => _showCardDetail(
+                context,
+                store,
+                store.availableCards.elementAt(i),
+              ),
             ),
           ),
         ),
@@ -242,32 +210,56 @@ class HallPage extends StatelessWidget {
   }
 }
 
+class _HallHero extends StatelessWidget {
+  const _HallHero();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 310,
+    margin: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFF5A4931)),
+      image: const DecorationImage(
+        image: AssetImage('assets/art/card_bearer.png'),
+        fit: BoxFit.cover,
+      ),
+    ),
+  );
+}
+
 class _ActiveCard extends StatelessWidget {
-  const _ActiveCard({required this.store, required this.card});
+  const _ActiveCard({
+    required this.store,
+    required this.card,
+    required this.canComplete,
+  });
   final MansionStore store;
   final ChoreCard card;
+  final bool canComplete;
 
   @override
   Widget build(BuildContext context) {
-    final servant = store.role == MansionRole.servant;
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        leading: Text(
-          card.chore.symbol,
-          style: const TextStyle(color: Color(0xFFC6A15B), fontSize: 28),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.asset(
+            'assets/cards/${card.chore.id}.png',
+            width: 40,
+            height: 52,
+            fit: BoxFit.cover,
+          ),
         ),
         title: Text(card.chore.title),
-        subtitle: Text(
-          servant
-              ? 'Žádá ${card.owner}'
-              : '${card.chore.reward} Kč čeká na dokončení',
-        ),
-        trailing: FilledButton(
-          onPressed: () =>
-              servant ? store.issueCard(card) : store.completeCard(card),
-          child: Text(servant ? 'Vydat' : 'Splněno'),
-        ),
+        subtitle: Text('${card.owner} • ${card.chore.minutes} min'),
+        trailing: canComplete
+            ? FilledButton(
+                onPressed: () => store.completeCard(card),
+                child: const Text('Splněno'),
+              )
+            : const Chip(label: Text('Ve hře')),
       ),
     );
   }
@@ -318,6 +310,18 @@ class ChoreCardView extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
+                Expanded(
+                  flex: 5,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/cards/${card.chore.id}.png',
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const Spacer(),
                 Text(
                   card.chore.title,
                   style: const TextStyle(fontSize: 19, height: 1.1),
@@ -334,6 +338,29 @@ class ChoreCardView extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 14, color: accent),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${card.chore.minutes} min',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    const Spacer(),
+                    ...List.generate(
+                      3,
+                      (index) => Container(
+                        width: 14,
+                        height: 4,
+                        margin: const EdgeInsets.only(left: 3),
+                        color: index < _difficultyBars(card.chore.difficulty)
+                            ? accent
+                            : const Color(0xFF3B3329),
+                      ),
+                    ),
+                  ],
+                ),
                 const Spacer(),
                 const Divider(),
                 Row(
@@ -349,8 +376,8 @@ class ChoreCardView extends StatelessWidget {
                     ),
                     Icon(
                       onPressed == null
-                          ? Icons.lock_outline
-                          : Icons.arrow_forward,
+                          ? Icons.verified_outlined
+                          : Icons.zoom_in,
                       size: 18,
                       color: const Color(0xFF8E8170),
                     ),
@@ -363,6 +390,174 @@ class ChoreCardView extends StatelessWidget {
       ),
     );
   }
+}
+
+int _difficultyBars(ChoreDifficulty difficulty) => switch (difficulty) {
+  ChoreDifficulty.easy => 1,
+  ChoreDifficulty.medium => 2,
+  ChoreDifficulty.hard || ChoreDifficulty.special => 3,
+};
+
+IconData _choreIcon(String id) => switch (id) {
+  'trash' => Icons.delete_outline,
+  'shopping' => Icons.shopping_bag_outlined,
+  'dishwasher' => Icons.local_dining_outlined,
+  'laundry' => Icons.checkroom_outlined,
+  'stairs' => Icons.stairs_outlined,
+  'queenie' => Icons.pets_outlined,
+  'toilet' => Icons.cleaning_services_outlined,
+  'dogs' => Icons.set_meal_outlined,
+  'sport' => Icons.sports_basketball_outlined,
+  'garden' => Icons.water_drop_outlined,
+  'evening' => Icons.nightlight_outlined,
+  'bathroom' => Icons.bathtub_outlined,
+  'mop' => Icons.water_damage_outlined,
+  'ironing' => Icons.iron_outlined,
+  'cooking' => Icons.soup_kitchen_outlined,
+  'school' => Icons.school_outlined,
+  'room' => Icons.auto_awesome_outlined,
+  _ => Icons.dark_mode_outlined,
+};
+
+Future<void> _showCardDetail(
+  BuildContext context,
+  MansionStore store,
+  ChoreCard card,
+) async {
+  final taken = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFF111114),
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5A5147),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 30),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/cards/${card.chore.id}.png',
+                height: 250,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Text(
+              card.chore.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 28),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              card.chore.note ??
+                  'Splň úkol poctivě a označ kartu jako hotovou.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF968C80), height: 1.4),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatTile(
+                    icon: Icons.schedule,
+                    value: '${card.chore.minutes} min',
+                    label: 'ODHAD',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _StatTile(
+                    icon: Icons.speed,
+                    value: card.chore.difficulty.label,
+                    label: 'NÁROČNOST',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _StatTile(
+                    icon: Icons.toll,
+                    value: '${card.chore.reward} Kč',
+                    label: 'ODMĚNA',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.front_hand_outlined),
+                label: const Text('Vzít kartu'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (taken == true && context.mounted) {
+    final accepted = store.takeCard(card);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          accepted
+              ? 'Karta je teď tvoje. Hodně štěstí.'
+              : 'Karta není dostupná.',
+        ),
+      ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+    decoration: BoxDecoration(
+      border: Border.all(color: const Color(0xFF3B3329)),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Column(
+      children: [
+        Icon(icon, size: 19, color: const Color(0xFFC6A15B)),
+        const SizedBox(height: 7),
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 8,
+            letterSpacing: 1.2,
+            color: Color(0xFF776F66),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class ChroniclePage extends StatelessWidget {
@@ -386,22 +581,32 @@ class ChroniclePage extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF5A4931)),
-                  ),
-                  child: Text(
-                    event.symbol,
-                    style: const TextStyle(
-                      color: Color(0xFFC6A15B),
-                      fontSize: 18,
-                    ),
-                  ),
-                ),
+                event.cardId == null
+                    ? Container(
+                        width: 42,
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF5A4931)),
+                        ),
+                        child: Text(
+                          event.symbol,
+                          style: const TextStyle(
+                            color: Color(0xFFC6A15B),
+                            fontSize: 18,
+                          ),
+                        ),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: Image.asset(
+                          'assets/cards/${event.cardId}.png',
+                          width: 42,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Container(
@@ -460,16 +665,29 @@ class DeckPage extends StatelessWidget {
           child: _PageHeading(
             eyebrow: 'SBÍRKA TROFEJÍ',
             title: 'Osobní balíček',
-            subtitle: 'Schválené karty a odměny tohoto měsíce.',
+            subtitle: 'Dokončené trofeje. Klepnutím kartu otočíš.',
           ),
         ),
+        if (store.awaitingApproval.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+              child: FilledButton.icon(
+                onPressed: () => _showAccounting(context, store),
+                icon: const Icon(Icons.front_hand_outlined),
+                label: Text(
+                  'Požádat Ruku o zúčtování (${store.awaitingApproval.length})',
+                ),
+              ),
+            ),
+          ),
         if (cards.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: _EmptyState(
               icon: Icons.style_outlined,
               title: 'Balíček zeje prázdnotou',
-              text: 'Dokonči kartu a nech ji schválit Rukou.',
+              text: 'Dokonči kartu a požádej Ruku o zúčtování.',
             ),
           )
         else
@@ -478,17 +696,145 @@ class DeckPage extends StatelessWidget {
             sliver: SliverGrid.builder(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 260,
-                mainAxisExtent: 252,
+                mainAxisExtent: 292,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
               itemCount: cards.length,
-              itemBuilder: (_, i) => ChoreCardView(card: cards[i]),
+              itemBuilder: (_, i) => _FlipCard(card: cards[i]),
             ),
           ),
       ],
     );
   }
+}
+
+class _FlipCard extends StatefulWidget {
+  const _FlipCard({required this.card});
+  final ChoreCard card;
+
+  @override
+  State<_FlipCard> createState() => _FlipCardState();
+}
+
+class _FlipCardState extends State<_FlipCard> {
+  bool flipped = false;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(end: flipped ? 1 : 0),
+    duration: const Duration(milliseconds: 520),
+    curve: Curves.easeInOutCubic,
+    builder: (context, value, _) {
+      final showBack = value >= 0.5;
+      return GestureDetector(
+        onTap: () => setState(() => flipped = !flipped),
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..setEntry(3, 2, 0.0015)
+            ..rotateY(value * math.pi),
+          child: showBack
+              ? Transform(
+                  alignment: Alignment.center,
+                  transform: Matrix4.rotationY(math.pi),
+                  child: _CardBack(card: widget.card),
+                )
+              : ChoreCardView(card: widget.card),
+        ),
+      );
+    },
+  );
+}
+
+class _CardBack extends StatelessWidget {
+  const _CardBack({required this.card});
+  final ChoreCard card;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFC6A15B), width: 2),
+        borderRadius: BorderRadius.circular(8),
+        image: const DecorationImage(
+          image: AssetImage('assets/branding/app_icon.png'),
+          opacity: 0.06,
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'KRONIKA KARTY',
+            style: TextStyle(
+              color: Color(0xFFC6A15B),
+              letterSpacing: 2,
+              fontSize: 10,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            _choreIcon(card.chore.id),
+            size: 48,
+            color: const Color(0xFFC6A15B),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            card.chore.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Zahrál ${card.owner}',
+            style: const TextStyle(color: Color(0xFF968C80)),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            card.completedAt == null
+                ? 'Čas dokončení neznámý'
+                : DateFormat('d. M. yyyy • HH:mm').format(card.completedAt!),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFFC6A15B)),
+          ),
+          const Spacer(),
+          Text(
+            card.status == ChoreStatus.completed ? 'ČEKÁ NA RUKU' : 'ZÚČTOVÁNO',
+            style: const TextStyle(fontSize: 10, letterSpacing: 1.6),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _showAccounting(BuildContext context, MansionStore store) async {
+  final count = store.awaitingApproval.length;
+  final total = store.awaitingReward;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.front_hand, size: 58, color: Color(0xFFC6A15B)),
+      title: const Text('Ruka přepočítala balíček'),
+      content: Text(
+        '$count dokončených karet má hodnotu $total Kč.',
+        textAlign: TextAlign.center,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Ještě ne'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Požádat o zúčtování'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed == true) store.accountCompletedCards();
 }
 
 class TreasuryPage extends StatelessWidget {
@@ -497,14 +843,13 @@ class TreasuryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final awaiting = store.awaitingApproval.toList();
     return ListView(
       padding: const EdgeInsets.only(bottom: 30),
       children: [
         const _PageHeading(
           eyebrow: 'RUKA DOHLÍŽÍ',
           title: 'Měsíční pokladna',
-          subtitle: 'Odměna roste s každou schválenou kartou.',
+          subtitle: 'Hotové karty přepočítá tajemná Ruka.',
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -534,44 +879,10 @@ class TreasuryPage extends StatelessWidget {
                   '${store.personalDeck.length} karet • násobič ${store.level.multiplier.toStringAsFixed(1)}×',
                   style: const TextStyle(color: Color(0xFF968C80)),
                 ),
-                if (store.role == MansionRole.hand &&
-                    store.personalDeck.any(
-                      (card) => card.status == ChoreStatus.approved,
-                    )) ...[
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: store.payMonth,
-                      icon: const Icon(Icons.draw_outlined),
-                      label: const Text('Podepsat šek'),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
         ),
-        if (awaiting.isNotEmpty) ...[
-          const _SectionTitle('ČEKÁ NA RUKU'),
-          ...awaiting.map(
-            (card) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Card(
-                child: ListTile(
-                  title: Text(card.chore.title),
-                  subtitle: Text('${card.owner} • ${card.chore.reward} Kč'),
-                  trailing: store.role == MansionRole.hand
-                      ? FilledButton(
-                          onPressed: () => store.approveCard(card),
-                          child: const Text('Schválit'),
-                        )
-                      : const Icon(Icons.hourglass_top),
-                ),
-              ),
-            ),
-          ),
-        ],
         const _SectionTitle('PROFIL'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -579,7 +890,7 @@ class TreasuryPage extends StatelessWidget {
             child: ListTile(
               leading: const CircleAvatar(child: Icon(Icons.person_outline)),
               title: Text(store.nickname),
-              subtitle: Text('Role: ${store.role.label}'),
+              subtitle: Text('Úroveň: ${store.level.label}'),
               trailing: IconButton(
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => _rename(context),

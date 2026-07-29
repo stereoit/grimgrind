@@ -1,4 +1,4 @@
-# Specifikace aplikace: ChoreCash (v1.0)
+# Specifikace aplikace: GrimGrind (v1.1)
 
 Mobilní aplikace pro správu domácích prací s finančním ohodnocením, atmosférou temného sídla ("Resident Evil" / "Addams Family") a karetní gamifikací. Aplikace motivuje členy domácnosti k plnění povinností skrze karty úkolů, sbírání osobního balíčku karet, notifikace a časovou osu událostí v domě.
 
@@ -12,11 +12,7 @@ Místo běžných názvů rolí používá aplikace temně hravé postavy sídla
    - Každý uživatel si může zvolit svůj temný **nickname** (např. *Dark Lord*, *Shadow Master*, *Královna sídla*).
    - Zvolený nickname se zobrazuje **napříč celou aplikací** – v notifikacích, na kartách i v Kronice sídla (např. *„Dark Lord právě označil úkol 'Vyčesat Queenie' za vyřešený! 🐶“*).
 
-2. **Služebník (Sluha sídla)** *(nahrazuje bankéře)*
-   - Služebník má na starosti správu sídla a karet úkolů.
-   - Hráči si u Služebníka žádají o vydání karty úkolu a Služebník jim ji schvaluje nebo předává.
-
-3. **Ruka (Thing / Tajuplná ruka)** *(správce pokladny a výplat)*
+2. **Ruka (Thing / Tajuplná ruka)** *(správce pokladny a výplat)*
    - Ruka má na starosti finální schvalování a vyplácení odměn.
    - Na konci měsíce se hráči obrací na Ruku, která jim **podepíše šek** a vyplatí peníze (přes Revolut).
 
@@ -38,17 +34,17 @@ Místo běžných názvů rolí používá aplikace temně hravé postavy sídla
 ## 🃏 Zjednodušená Herní Smyčka (Core Loop v1.0)
 
 ```
-1. Žádost u Služebníka ➡️ 2. Vydání karty ➡️ 3. Splnění úkolu ➡️ 4. Notifikace & Balíček ➡️ 5. Ruka podepíše Šek
+1. Vzetí karty ➡️ 2. Splnění úkolu ➡️ 3. Žádost o zúčtování ➡️ 4. Ruka přepočítá odměnu ➡️ 5. Výplata
 ```
 
-1. **Výběr úkolu (Hráč)**: Hráč si vybere kartu úkolu a požádá **Služebníka** o její vydání.
-2. **Vydání karty (Služebník)**: Služebník kartu vydá hráčovi.
-3. **Plnění & Označení**: Hráč úkol vykoná a v aplikaci ho označí za hotový.
+1. **Výběr úkolu (Hráč)**: Hráč si vybere kartu úkolu a jedním potvrzením si ji rovnou vezme do aktivního balíčku.
+2. **Plnění & Označení**: Hráč úkol vykoná a v aplikaci ho označí za hotový.
 4. **Notifikace všem & Kronika sídla**:
    - Všem ostatním hráčům dorazí push notifikace s nicknamem (*„Dark Lord právě dokončil úkol 'Vyčesat Queenie'! 🐶“*).
    - Událost se zaznamená do živé **Časové osy / Kroniky sídla**.
-5. **Přidání do Osobního Balíčku**: Po schválení se karta přemístí do **Osobního balíčku karet** daného hráče.
-6. **Měsíční Vyhodnocení & Ruka**: Na konci měsíce **Ruka podepíše šek** a vyplatí zisk přes Revolut.
+5. **Žádost o zúčtování**: Hráč pošle všechny hotové karty Ruce. Ruka zobrazí počet karet, základ odměny, level multiplikátor a výslednou částku.
+6. **Přidání do Osobního Balíčku**: Po zúčtování se karty přemístí do **Osobního balíčku karet** daného hráče.
+7. **Měsíční Vyhodnocení & Ruka**: Na konci měsíce **Ruka podepíše šek** a vyplatí zisk přes Revolut.
 
 ---
 
@@ -88,10 +84,9 @@ Místo běžných názvů rolí používá aplikace temně hravé postavy sídla
 ## 🎨 Grafický Styl a UI Metafora (Resident Evil / Addams Family)
 
 - **Vzhled a atmosféra**: Temný "Dark Art" styl sídla.
-- **Postavy**:
-  - **Služebník** (spravuje úkoly a karty)
-  - **Ruka** (podepisuje šeky a spravuje peníze)
+- **Postava**: **Ruka** přepočítává hotové karty, podepisuje šeky a spravuje peníze.
 - **UI Metafora - Hrací karty**: Úkoly jako sběratelské karty.
+- **Vizuální systém**: Detailní pravidla, paleta a prompty jsou v `DESIGN.md`.
 
 ---
 

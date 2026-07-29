@@ -1,11 +1,11 @@
 {
-    "name": "chore_cash",
-    "short_name": "chore_cash",
+    "name": "GrimGrind",
+    "short_name": "GrimGrind",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B0B0D",
+    "theme_color": "#6E1830",
+    "description": "Proměň domácí povinnosti v temnou karetní hru.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

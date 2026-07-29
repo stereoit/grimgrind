@@ -1,21 +1,91 @@
-# ChoreCash
+# GrimGrind
 
-Flutter MVP for a household chore card game. It implements the complete card flow:
+Temná karetní hra, která mění domácí povinnosti na questy a odměny.
 
-`request → issue by Služebník → complete → approve by Ruka → monthly cheque`
+Herní tok: `vzít kartu → splnit → požádat Ruku o zúčtování → získat odměnu`.
 
-The app starts with an in-memory household so it can be reviewed without credentials. Use the role menu in the top-right corner to exercise each approval step.
-
-## Run
+## Lokální spuštění
 
 ```sh
 flutter pub get
 flutter run
 ```
 
-## Firebase setup
+Demo používá lokální `MansionStore`, takže funguje bez cloudových přístupů. Výtvarná pravidla a prompty pro konzistentní generování grafik jsou v [DESIGN.md](DESIGN.md).
 
-The project includes Firebase Auth, Firestore and Messaging dependencies plus production-oriented Firestore rules. Connect a Firebase project before replacing `MansionStore` with a Firestore-backed store:
+## Distribuce členům domácnosti
+
+Workflow [`.github/workflows/distribute.yml`](.github/workflows/distribute.yml) ověří aplikaci, vytvoří podepsané Android APK a iOS IPA a nahraje je do Firebase App Distribution. Spouští se ručně v GitHub Actions nebo automaticky po vytvoření tagu `v*`.
+
+### 1. Firebase
+
+1. Vytvoř projekt ve [Firebase Console](https://console.firebase.google.com/).
+2. Přidej Android aplikaci s package ID `cz.chorecash.chore_cash`.
+3. Přidej iOS aplikaci s bundle ID `cz.chorecash.choreCash`.
+4. Otevři **App Distribution → Testers & Groups**, vytvoř skupinu `household` a přidej e-maily členů.
+5. V Google Cloud Console vytvoř service account s rolí **Firebase App Distribution Admin** a stáhni JSON klíč.
+6. Z Firebase nastavení obou aplikací si poznamenej App ID ve tvaru `1:123456789:android:...` a `1:123456789:ios:...`.
+
+### 2. Android podpis
+
+Vytvoř upload klíč. Soubor ani hesla necommituj:
+
+```sh
+keytool -genkeypair -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+base64 < upload-keystore.jks | tr -d '\n' | pbcopy
+```
+
+Obsah schránky vlož do GitHub secretu `ANDROID_KEYSTORE_BASE64`.
+
+### 3. iOS podpis
+
+iOS distribuce mimo App Store vyžaduje placený **Apple Developer Program** a předem registrovaná zařízení testerů.
+
+1. V Apple Developer portálu zaregistruj App ID `cz.chorecash.choreCash`.
+2. Získej UDID všech iPhonů členů a přidej je do **Devices**.
+3. Vytvoř **Apple Distribution** certifikát a exportuj jej z Keychain Access jako `.p12` s heslem.
+4. Vytvoř **Ad Hoc provisioning profile** pro App ID a všechna registrovaná zařízení. Stáhni `.mobileprovision` a poznamenej přesný název profilu.
+5. Zakóduj oba soubory:
+
+```sh
+base64 < distribution.p12 | tr -d '\n' | pbcopy
+base64 < GrimGrind_AdHoc.mobileprovision | tr -d '\n' | pbcopy
+```
+
+Pro veřejnější iOS distribuci bez sběru UDID je vhodnější TestFlight; vyžaduje samostatné App Store Connect API nastavení a Apple review pro externí testery.
+
+> Poznámka: Flutter při exportu pojmenuje výsledný soubor `grimgrind.ipa`; workflow s tímto názvem počítá.
+
+### 4. GitHub Secrets
+
+V repozitáři otevři **Settings → Secrets and variables → Actions → New repository secret** a nastav:
+
+| Secret | Hodnota |
+| --- | --- |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Celý obsah JSON klíče service accountu |
+| `FIREBASE_ANDROID_APP_ID` | Firebase Android App ID |
+| `FIREBASE_IOS_APP_ID` | Firebase iOS App ID |
+| `ANDROID_KEYSTORE_BASE64` | Base64 Android keystore |
+| `ANDROID_KEYSTORE_PASSWORD` | Heslo keystore |
+| `ANDROID_KEY_PASSWORD` | Heslo klíče |
+| `ANDROID_KEY_ALIAS` | `upload` nebo zvolený alias |
+| `IOS_CERTIFICATE_BASE64` | Base64 `.p12` certifikát |
+| `IOS_CERTIFICATE_PASSWORD` | Heslo `.p12` |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Base64 Ad Hoc profilu |
+| `IOS_PROFILE_NAME` | Přesný název provisioning profilu |
+| `APPLE_TEAM_ID` | Desetiznakové Apple Team ID |
+| `KEYCHAIN_PASSWORD` | Libovolné silné dočasné heslo pro CI keychain |
+
+### 5. První vydání
+
+1. Pushni repozitář na GitHub.
+2. Otevři **Actions → Distribute GrimGrind → Run workflow**.
+3. Po úspěchu Firebase rozešle skupině `household` pozvánku. Android uživatelé instalují APK přes Firebase App Tester; iOS instalace funguje pouze na zařízeních obsažených v Ad Hoc profilu.
+4. Další verzi vydáš tagem, například `git tag v1.0.1 && git push origin v1.0.1`.
+
+## Firebase backend
+
+Repozitář obsahuje Firebase Auth, Firestore a Messaging závislosti a Firestore pravidla. Před nahrazením lokálního store spusť:
 
 ```sh
 dart pub global activate flutterfire_cli
@@ -23,4 +93,13 @@ flutterfire configure
 firebase deploy --only firestore
 ```
 
-Expected collections are `users`, `chores`, `cards`, `chronicle`, and `payouts`. Chronicle entries and push notifications should be written by trusted backend code when a card changes state. The monthly Cloud Run job reads approved cards, applies the player's level multiplier, creates a payout, and stores the generated Revolut URL in `payouts`.
+Projekt je navázaný přes `.firebaserc` na Firebase project ID `grim-grind`. Pro aktivaci push notifikací a serverových zápisů do Kroniky je nutné se na počítači vlastníka jednou přihlásit a nasadit funkce:
+
+```sh
+npx firebase-tools login
+npx firebase-tools deploy --project grim-grind --only firestore,functions
+```
+
+Cloud Function `notifyCompletedCard` reaguje na přechod karty do `completed`, zapíše zahranou kartu do `chronicle` a odešle FCM zprávu na topic `household`. Mobilní klient musí po přihlášení uložit FCM token a přihlásit jej k tomuto topicu; pro produkční zapojení je rovněž nutné vygenerovat `firebase_options.dart` příkazem `flutterfire configure --project grim-grind`.
+
+Kolekce jsou `users`, `chores`, `cards`, `chronicle` a `payouts`. Kroniku, notifikace a finální Revolut odkazy musí v produkci zapisovat důvěryhodný backend.
