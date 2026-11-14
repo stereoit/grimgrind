@@ -1,46 +1,59 @@
-const {onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 
 initializeApp();
 
-exports.notifyCompletedCard = onDocumentUpdated("cards/{cardId}", async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
-  if (before.status === "completed" || after.status !== "completed") return;
+exports.notifyPlayedCard = onDocumentCreated(
+  "gangs/{gangId}/played_cards/{cardId}",
+  async (event) => {
+    const data = event.data.data();
+    const gangId = event.params.gangId;
+    const db = getFirestore();
 
-  const title = `${after.ownerNickname} zahrál kartu`;
-  const body = `${after.choreTitle} je splněno a padá do balíčku.`;
-  const db = getFirestore();
+    await db.collection(`gangs/${gangId}/feed`).add({
+      type: "cardPlayed",
+      actorNickname: data.memberNickname,
+      title: data.choreTitle,
+      message: `zahrál kartu „${data.choreTitle}“ a uložil ${data.coinsAwarded} Coinů do Banku.`,
+      choreId: data.choreId,
+      coins: data.coinsAwarded,
+      monthKey: data.monthKey,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
-  await db.collection("chronicle").add({
-    actor: after.ownerNickname,
-    message: `zahrál kartu „${after.choreTitle}“ a dokončil úkol!`,
-    cardId: after.choreId,
-    cardTitle: after.choreTitle,
-    createdAt: FieldValue.serverTimestamp(),
-    type: "cardCompleted",
-  });
+    await getMessaging().send({
+      topic: `gang_${gangId}`,
+      notification: {
+        title: `${data.memberNickname} zahrál kartu`,
+        body: `${data.choreTitle} (+${data.coinsAwarded} Coinů do Banku).`,
+      },
+      data: {gangId, choreId: data.choreId, type: "cardPlayed"},
+    });
+  },
+);
 
-  await getMessaging().send({
-    topic: "household",
-    notification: {title, body},
-    data: {cardId: after.choreId, type: "cardCompleted"},
-  });
-});
+exports.recordApprovedExchange = onDocumentUpdated(
+  "gangs/{gangId}/exchanges/{exchangeId}",
+  async (event) => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+    if (before.status === "approved" || after.status !== "approved") return;
 
-exports.recordAccountingRequest = onDocumentUpdated("cards/{cardId}", async (event) => {
-  const before = event.data.before.data();
-  const after = event.data.after.data();
-  if (before.status !== "completed" || after.status !== "approved") return;
+    const gangId = event.params.gangId;
+    const czk = Math.round(after.totalCoins / (after.coinsPerCzk || 10));
 
-  await getFirestore().collection("chronicle").add({
-    actor: after.ownerNickname,
-    message: `poslal kartu „${after.choreTitle}“ Ruce k zúčtování.`,
-    cardId: after.choreId,
-    cardTitle: after.choreTitle,
-    createdAt: FieldValue.serverTimestamp(),
-    type: "accountingRequested",
-  });
-});
+    await getFirestore().collection(`gangs/${gangId}/feed`).add({
+      type: "exchangeApproved",
+      actorNickname: after.memberNickname,
+      title: "Směna schválena Rukou",
+      message: `${after.memberNickname} směnili ${after.cardIds.length} karet za ${after.totalCoins} Coinů (${czk} Kč).`,
+      coins: after.totalCoins,
+      czkAmount: czk,
+      cardCount: after.cardIds.length,
+      monthKey: after.monthKey,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  },
+);

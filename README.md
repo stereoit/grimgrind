@@ -107,6 +107,6 @@ npx firebase-tools login
 npx firebase-tools deploy --project grim-grind --only firestore,functions
 ```
 
-Cloud Function `notifyCompletedCard` reaguje na přechod karty do `completed`, zapíše zahranou kartu do `chronicle` a odešle FCM zprávu na topic `household`. Mobilní klient musí po přihlášení uložit FCM token a přihlásit jej k tomuto topicu; pro produkční zapojení je rovněž nutné vygenerovat `firebase_options.dart` příkazem `flutterfire configure --project grim-grind`.
+Cloud Functions `notifyPlayedCard` a `recordApprovedExchange` reagují na zahrání karty do `gangs/{gangId}/played_cards` a schválení směny v `gangs/{gangId}/exchanges`, zapisují záznamy do `gangs/{gangId}/feed` a odesílají FCM zprávy na topic `gang_{gangId}`. Mobilní klient musí po přihlášení uložit FCM token a přihlásit jej k tomuto topicu; pro produkční zapojení je rovněž nutné vygenerovat `firebase_options.dart` příkazem `flutterfire configure --project grim-grind`.
 
-Kolekce jsou `users`, `chores`, `cards`, `chronicle` a `payouts`. Kroniku, notifikace a finální Revolut odkazy musí v produkci zapisovat důvěryhodný backend.
+Kolekce jsou `gangs/{gangId}/members`, `gangs/{gangId}/played_cards`, `gangs/{gangId}/exchanges` a `gangs/{gangId}/feed`. Feed a notifikace v produkci zapisuje důvěryhodný backend.
