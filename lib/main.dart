@@ -464,9 +464,10 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
 // =============================================================================
 
 class MansionShell extends StatefulWidget {
-  const MansionShell({super.key, required this.store});
+  const MansionShell({super.key, required this.store, this.updateService});
 
   final MansionStore store;
+  final DistributionUpdateService? updateService;
 
   @override
   State<MansionShell> createState() => _MansionShellState();
@@ -474,6 +475,25 @@ class MansionShell extends StatefulWidget {
 
 class _MansionShellState extends State<MansionShell> {
   int index = 0;
+  late final DistributionUpdateService _updateService =
+      widget.updateService ?? DistributionUpdateService();
+  UpdateCheckResult? _pendingUpdate;
+  bool _updateDismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final result = await _updateService.checkForUpdate();
+    if (!mounted || result == null || !result.isUpdateAvailable) return;
+    setState(() {
+      _pendingUpdate = result;
+      _updateDismissed = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -522,12 +542,26 @@ class _MansionShellState extends State<MansionShell> {
               member.isHand ? Icons.front_hand : Icons.person_outline,
               color: const Color(0xFFC6A15B),
             ),
-            onPressed: () => _showGangSheet(context, store),
+            onPressed: () =>
+                _showGangSheet(context, store, updateService: _updateService),
           ),
         ],
       ),
       body: SafeArea(
-        child: IndexedStack(index: index, children: pages),
+        child: Column(
+          children: [
+            if (_pendingUpdate != null && !_updateDismissed)
+              UpdateBanner(
+                result: _pendingUpdate!,
+                onUpdate: () =>
+                    _updateService.openUpdateUrl(_pendingUpdate!.info),
+                onDismiss: () => setState(() => _updateDismissed = true),
+              ),
+            Expanded(
+              child: IndexedStack(index: index, children: pages),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: index == 0
           ? FloatingActionButton.extended(
@@ -1963,6 +1997,46 @@ Future<void> _showGangSheet(BuildContext context, MansionStore store) async {
                       ),
                     ],
                   ),
+                  if (updateService != null) ...[
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.system_update_alt,
+                        color: Color(0xFFC6A15B),
+                      ),
+                      title: const Text('Aktualizace aplikace'),
+                      subtitle: FutureBuilder<({String version, int buildNumber})>(
+                        future: updateService.currentAppVersion(),
+                        builder: (context, snapshot) {
+                          final v = snapshot.data;
+                          return Text(
+                            v == null
+                                ? 'Zkontrolovat novou verzi'
+                                : 'Aktuální verze ${v.version} (#${v.buildNumber})',
+                          );
+                        },
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final nav = Navigator.of(context);
+                        final result = await updateService.checkForUpdate();
+                        if (result != null && result.isUpdateAvailable) {
+                          nav.pop();
+                          await updateService.openUpdateUrl(result.info);
+                        } else {
+                          nav.pop();
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Máš nejnovější dostupnou verzi.'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),

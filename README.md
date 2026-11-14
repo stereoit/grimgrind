@@ -29,9 +29,9 @@ Po každém commitu do `main`:
 1. Vytvoř projekt ve [Firebase Console](https://console.firebase.google.com/).
 2. Přidej Android aplikaci s package ID `cz.chorecash.chore_cash`.
 3. Přidej iOS aplikaci s bundle ID `cz.chorecash.choreCash`.
-4. Otevři **App Distribution → Testers & Groups**, vytvoř skupinu `household` a přidej e-maily členů.
-5. V Google Cloud Console vytvoř service account s rolí **Firebase App Distribution Admin** a stáhni JSON klíč.
-6. Z Firebase nastavení obou aplikací si poznamenej App ID ve tvaru `1:123456789:android:...` a `1:123456789:ios:...`.
+4. Otevři **App Distribution → Testers & Groups**, vytvoř skupinu `household` a přidej e-maily členů. Veřejný zvací odkaz pro testery je `https://appdistribution.firebase.dev/i/152f586ed88ca49c`.
+5. V Google Cloud Console vytvoř service account s rolemi **Firebase App Distribution Admin** a **Cloud Datastore User** (pro automatický zápis verze do Firestore `app_config/distribution`) a stáhni JSON klíč.
+6. Z Firebase nastavení obou aplikací si poznamenej App ID ve tvaru `1:123456789:android:...` a `1:123456789:ios:...` a stáhni konfigurační soubory `google-services.json` (Android) a `GoogleService-Info.plist` (iOS).
 
 ### 2. Android podpis
 
@@ -61,7 +61,7 @@ base64 < GrimGrind_AdHoc.mobileprovision | tr -d '\n' | pbcopy
 
 Pro veřejnější iOS distribuci bez sběru UDID je vhodnější TestFlight; vyžaduje samostatné App Store Connect API nastavení a Apple review pro externí testery.
 
-> Poznámka: Flutter při exportu pojmenuje výsledný soubor `grimgrind.ipa`; workflow s tímto názvem počítá.
+> Poznámka: Flutter při exportu pojmenuje výsledný soubor `grimgrind.ipa`; workflow s tímto názvem počáta.
 
 ### 4. GitHub Secrets
 
@@ -72,6 +72,8 @@ V repozitáři otevři **Settings → Secrets and variables → Actions → New 
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Celý obsah JSON klíče service accountu |
 | `FIREBASE_ANDROID_APP_ID` | Firebase Android App ID |
 | `FIREBASE_IOS_APP_ID` | Firebase iOS App ID |
+| `GOOGLE_SERVICES_JSON_BASE64` | Base64 `google-services.json` (pro in-app kontrolu verzí a Firebase na Androidu) |
+| `GOOGLE_SERVICE_INFO_PLIST_BASE64` | Base64 `GoogleService-Info.plist` (pro in-app kontrolu verzí a Firebase na iOS) |
 | `ANDROID_KEYSTORE_BASE64` | Base64 Android keystore |
 | `ANDROID_KEYSTORE_PASSWORD` | Heslo keystore |
 | `ANDROID_KEY_PASSWORD` | Heslo klíče |

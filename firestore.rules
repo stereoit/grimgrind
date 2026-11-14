@@ -53,5 +53,10 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+
+    match /app_config/distribution {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }
