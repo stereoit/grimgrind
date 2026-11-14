@@ -15,7 +15,14 @@ Demo používá lokální `MansionStore`, takže funguje bez cloudových příst
 
 ## Distribuce členům domácnosti
 
-Workflow [`.github/workflows/distribute.yml`](.github/workflows/distribute.yml) ověří aplikaci, vytvoří podepsané Android APK a iOS IPA a nahraje je do Firebase App Distribution. Spouští se ručně v GitHub Actions nebo automaticky po vytvoření tagu `v*`.
+Workflow [`.github/workflows/distribute.yml`](.github/workflows/distribute.yml) se spouští automaticky při každém commitu do větve `main`, při vytvoření tagu `v*` nebo ručně v GitHub Actions.
+
+Po každém commitu do `main`:
+1. Ověří kód (`flutter analyze`, `flutter test`).
+2. Sestaví Android APK (pokud není nastavený `ANDROID_KEYSTORE_BASE64`, podepíše jej automaticky debug klíčem).
+3. Nahraje `grimgrind.apk` jako artefakt běhu v GitHub Actions a zároveň publikuje nový **GitHub Release**, takže nejnovější APK lze v Android telefonu vždy stáhnout přímo z adresy:
+   - **`https://github.com/stereoit/grimgrind/releases/latest/download/grimgrind.apk`**
+4. Volitelně odešle build do Firebase App Distribution a sestaví iOS IPA, jakmile jsou v repozitáři nastavené příslušné GitHub Secrets.
 
 ### 1. Firebase
 

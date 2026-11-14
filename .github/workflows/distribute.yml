@@ -8,11 +8,13 @@ on:
         required: false
         default: New GrimGrind build
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: "3.35.6"
@@ -20,6 +22,8 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    outputs:
+      ios_enabled: ${{ steps.check_secrets.outputs.ios_enabled }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -30,6 +34,18 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - name: Check optional platform secrets
+        id: check_secrets
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$IOS_CERTIFICATE_BASE64" ] && [ -n "$IOS_PROVISIONING_PROFILE_BASE64" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "ios_enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios_enabled=false" >> "$GITHUB_OUTPUT"
+          fi
 
   android:
     needs: verify
@@ -42,37 +58,80 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - name: Restore Android signing key
-        run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
-          cat > android/key.properties <<EOF
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyPassword=$ANDROID_KEY_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=upload-keystore.jks
-          EOF
+      - name: Restore Android signing key (if configured)
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      - name: Build signed APK
-        run: flutter build apk --release --build-number "${GITHUB_RUN_NUMBER}"
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+            cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+          else
+            echo "ANDROID_KEYSTORE_BASE64 not set; falling back to debug signing config."
+          fi
+      - name: Build APK
+        run: |
+          flutter build apk --release --build-number "${GITHUB_RUN_NUMBER}"
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/grimgrind.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: grimgrind-android
+          path: build/app/outputs/flutter-apk/grimgrind.apk
+      - name: Publish APK to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+            TITLE="GrimGrind ${TAG_NAME}"
+          else
+            TAG_NAME="build-${GITHUB_RUN_NUMBER}"
+            SHORT_SHA="${GITHUB_SHA::7}"
+            TITLE="GrimGrind build #${GITHUB_RUN_NUMBER} (${SHORT_SHA})"
+          fi
+          NOTES="${RELEASE_NOTES:-Commit ${GITHUB_SHA::7}: $(git log -1 --pretty=%s)}"
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" build/app/outputs/flutter-apk/grimgrind.apk --clobber
+          else
+            gh release create "$TAG_NAME" build/app/outputs/flutter-apk/grimgrind.apk \
+              --target "${GITHUB_SHA}" \
+              --title "$TITLE" \
+              --notes "$NOTES" \
+              --latest
+          fi
+      - name: Check Firebase Android secrets
+        id: firebase_android
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_ANDROID_APP_ID" ] && [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Distribute Android to Firebase testers
+        if: steps.firebase_android.outputs.enabled == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           groups: household
-          file: build/app/outputs/flutter-apk/app-release.apk
+          file: build/app/outputs/flutter-apk/grimgrind.apk
           releaseNotes: ${{ inputs.release_notes || github.ref_name }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: grimgrind-android
-          path: build/app/outputs/flutter-apk/app-release.apk
 
   ios:
     needs: verify
+    if: needs.verify.outputs.ios_enabled == 'true'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -119,7 +178,19 @@ jobs:
         run: |
           ipa_files=(build/ios/ipa/*.ipa)
           mv "${ipa_files[0]}" build/ios/ipa/grimgrind.ipa
+      - name: Check Firebase iOS secrets
+        id: firebase_ios
+        env:
+          FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_IOS_APP_ID" ] && [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Distribute iOS to Firebase testers
+        if: steps.firebase_ios.outputs.enabled == 'true'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
           appId: ${{ secrets.FIREBASE_IOS_APP_ID }}
