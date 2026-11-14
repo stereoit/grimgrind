@@ -204,13 +204,19 @@ jobs:
           fi
       - name: Distribute iOS to Firebase testers
         if: steps.firebase_ios.outputs.enabled == 'true'
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_IOS_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          groups: household
-          file: build/ios/ipa/grimgrind.ipa
-          releaseNotes: ${{ inputs.release_notes || github.ref_name }}
+        env:
+          FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          RELEASE_NOTES: ${{ inputs.release_notes || github.ref_name }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$SA_FILE"
+          GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools appdistribution:distribute \
+            build/ios/ipa/grimgrind.ipa \
+            --app "$FIREBASE_IOS_APP_ID" \
+            --groups household \
+            --release-notes "$RELEASE_NOTES"
+          rm -f "$SA_FILE"
       - name: Update Firestore distribution metadata (iOS)
         if: steps.firebase_ios.outputs.enabled == 'true'
         continue-on-error: true
