@@ -12,6 +12,12 @@ on:
       - main
     tags:
       - "v*"
+    paths-ignore:
+      - "**.md"
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - ".agents/**"
 
 permissions:
   contents: write
@@ -48,10 +54,19 @@ jobs:
           fi
 
   android:
-    needs: verify
     runs-on: ubuntu-24.04
+    outputs:
+      commit_subject: ${{ steps.meta.outputs.commit_subject }}
     steps:
       - uses: actions/checkout@v7
+      - name: Capture commit metadata
+        id: meta
+        run: |
+          {
+            echo "commit_subject<<EOF"
+            git log -1 --pretty=%s
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -98,10 +113,21 @@ jobs:
         with:
           name: grimgrind-android
           path: build/app/outputs/flutter-apk/grimgrind.apk
+
+  android_distribute:
+    needs: [verify, android]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: grimgrind-android
+          path: build/app/outputs/flutter-apk
       - name: Publish APK to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
+          COMMIT_SUBJECT: ${{ needs.android.outputs.commit_subject }}
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG_NAME="${GITHUB_REF_NAME}"
@@ -111,7 +137,7 @@ jobs:
             SHORT_SHA="${GITHUB_SHA::7}"
             TITLE="GrimGrind build #${GITHUB_RUN_NUMBER} (${SHORT_SHA})"
           fi
-          NOTES="${RELEASE_NOTES:-Commit ${GITHUB_SHA::7}: $(git log -1 --pretty=%s)}"
+          NOTES="${RELEASE_NOTES:-Commit ${GITHUB_SHA::7}: ${COMMIT_SUBJECT}}"
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" build/app/outputs/flutter-apk/grimgrind.apk --clobber
           else
