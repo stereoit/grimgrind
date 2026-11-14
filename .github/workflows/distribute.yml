@@ -61,6 +61,15 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+      - name: Cache Android NDK and CMake
+        uses: actions/cache@v5
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/27.0.12077973
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: ${{ runner.os }}-android-sdk-ndk-27.0.12077973-cmake-3.22.1
       - run: flutter pub get
       - name: Restore Android signing key (if configured)
         env:
@@ -82,7 +91,7 @@ jobs:
           fi
       - name: Build APK
         run: |
-          flutter build apk --release --build-number "${GITHUB_RUN_NUMBER}"
+          flutter build apk --release --target-platform android-arm64 --build-number "${GITHUB_RUN_NUMBER}"
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/grimgrind.apk
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
