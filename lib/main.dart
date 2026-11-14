@@ -3,13 +3,15 @@ import 'package:intl/intl.dart';
 
 import 'mansion_store.dart';
 import 'models.dart';
+import 'update_checker.dart';
 
 void main() => runApp(const GrimGrindApp());
 
 class GrimGrindApp extends StatefulWidget {
-  const GrimGrindApp({super.key, this.store});
+  const GrimGrindApp({super.key, this.store, this.updateService});
 
   final MansionStore? store;
+  final DistributionUpdateService? updateService;
 
   @override
   State<GrimGrindApp> createState() => _GrimGrindAppState();
@@ -36,7 +38,10 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
           if (!store.isReady) {
             return OnboardingFlow(store: store);
           }
-          return MansionShell(store: store);
+          return MansionShell(
+            store: store,
+            updateService: widget.updateService,
+          );
         },
       ),
     );
@@ -1887,7 +1892,11 @@ class _MiniStat extends StatelessWidget {
 // Gang & Profile Sheet (Switch active member, invite code, rename)
 // =============================================================================
 
-Future<void> _showGangSheet(BuildContext context, MansionStore store) async {
+Future<void> _showGangSheet(
+  BuildContext context,
+  MansionStore store, {
+  DistributionUpdateService? updateService,
+}) async {
   final renameController = TextEditingController(
     text: store.currentMember?.nickname ?? '',
   );
