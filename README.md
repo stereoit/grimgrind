@@ -92,6 +92,19 @@ V repozitáři otevři **Settings → Secrets and variables → Actions → New 
 3. Po úspěchu Firebase rozešle skupině `household` pozvánku. Android uživatelé instalují APK přes Firebase App Tester; iOS instalace funguje pouze na zařízeních obsažených v Ad Hoc profilu.
 4. Další verzi vydáš tagem, například `git tag v1.0.1 && git push origin v1.0.1`.
 
+### 6. Přidání dalšího iOS testera (nové UDID)
+
+Pokud chceš aplikaci nasdílet dalšímu kamarádovi s iPhonem:
+
+1. **Apple Developer Portal → Devices**: Přidej jeho UDID jako nové zařízení.
+2. **Profiles**: Otevři svůj **Ad Hoc provisioning profile**, zaškrtni nově přidané zařízení, profil znovu vygeneruj (**Generate**) a stáhni aktualizovaný `.mobileprovision` soubor.
+3. **GitHub Secrets**: Zakóduj aktualizovaný profil a přepiš secret `IOS_PROVISIONING_PROFILE_BASE64` (pokud se změnil název profilu, aktualizuj i `IOS_PROFILE_NAME`):
+   ```sh
+   base64 < GrimGrind_AdHoc.mobileprovision | tr -d '\n' | pbcopy
+   ```
+4. **Firebase Console → App Distribution → Testers & Groups**: Přidej e-mail kamaráda do skupiny `household` (nebo mu pošli veřejný zvací odkaz `https://appdistribution.firebase.dev/i/152f586ed88ca49c`).
+5. **Spusť nový build**: V **GitHub Actions → Distribute GrimGrind → Run workflow** (nebo pushem do `main`) se sestaví nové `.ipa` podepsané aktualizovaným profilem a Firebase ho rozešle všem ve skupině `household`.
+
 ## Firebase backend
 
 Repozitář obsahuje Firebase Auth, Firestore a Messaging závislosti a Firestore pravidla. Před nahrazením lokálního store spusť:
