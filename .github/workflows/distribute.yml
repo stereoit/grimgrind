@@ -265,6 +265,12 @@ jobs:
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Cache npm for firebase-tools
+        if: steps.firebase_ios.outputs.enabled == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-firebase-tools-npm
       - name: Distribute iOS to Firebase testers
         if: steps.firebase_ios.outputs.enabled == 'true'
         env:
@@ -273,13 +279,13 @@ jobs:
           RELEASE_NOTES: ${{ inputs.release_notes || github.ref_name }}
         run: |
           SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          trap 'rm -f "$SA_FILE"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$SA_FILE"
           GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools appdistribution:distribute \
             build/ios/ipa/grimgrind.ipa \
             --app "$FIREBASE_IOS_APP_ID" \
             --groups household \
             --release-notes "$RELEASE_NOTES"
-          rm -f "$SA_FILE"
       - name: Update Firestore distribution metadata (iOS)
         if: steps.firebase_ios.outputs.enabled == 'true'
         continue-on-error: true
