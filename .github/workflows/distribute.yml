@@ -12,6 +12,12 @@ on:
       - main
     tags:
       - "v*"
+    paths-ignore:
+      - "**.md"
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - ".agents/**"
 
 permissions:
   contents: write
@@ -48,10 +54,19 @@ jobs:
           fi
 
   android:
-    needs: verify
     runs-on: ubuntu-24.04
+    outputs:
+      commit_subject: ${{ steps.meta.outputs.commit_subject }}
     steps:
       - uses: actions/checkout@v7
+      - name: Capture commit metadata
+        id: meta
+        run: |
+          {
+            echo "commit_subject<<EOF"
+            git log -1 --pretty=%s
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -61,6 +76,15 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+      - name: Cache Android NDK and CMake
+        uses: actions/cache@v5
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/27.0.12077973
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: ${{ runner.os }}-android-sdk-ndk-27.0.12077973-cmake-3.22.1
       - run: flutter pub get
       - name: Restore Android signing key (if configured)
         env:
@@ -82,17 +106,28 @@ jobs:
           fi
       - name: Build APK
         run: |
-          flutter build apk --release --build-number "${GITHUB_RUN_NUMBER}"
+          flutter build apk --release --target-platform android-arm64 --build-number "${GITHUB_RUN_NUMBER}"
           cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/grimgrind.apk
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
           name: grimgrind-android
           path: build/app/outputs/flutter-apk/grimgrind.apk
+
+  android_distribute:
+    needs: [verify, android]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: grimgrind-android
+          path: build/app/outputs/flutter-apk
       - name: Publish APK to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
+          COMMIT_SUBJECT: ${{ needs.android.outputs.commit_subject }}
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG_NAME="${GITHUB_REF_NAME}"
@@ -102,7 +137,7 @@ jobs:
             SHORT_SHA="${GITHUB_SHA::7}"
             TITLE="GrimGrind build #${GITHUB_RUN_NUMBER} (${SHORT_SHA})"
           fi
-          NOTES="${RELEASE_NOTES:-Commit ${GITHUB_SHA::7}: $(git log -1 --pretty=%s)}"
+          NOTES="${RELEASE_NOTES:-Commit ${GITHUB_SHA::7}: ${COMMIT_SUBJECT}}"
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
             gh release upload "$TAG_NAME" build/app/outputs/flutter-apk/grimgrind.apk --clobber
           else
@@ -123,15 +158,27 @@ jobs:
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Cache npm for firebase-tools
+        if: steps.firebase_android.outputs.enabled == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-firebase-tools-npm
       - name: Distribute Android to Firebase testers
         if: steps.firebase_android.outputs.enabled == 'true'
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
-        with:
-          appId: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
-          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-          groups: household
-          file: build/app/outputs/flutter-apk/grimgrind.apk
-          releaseNotes: ${{ inputs.release_notes || github.ref_name }}
+        env:
+          FIREBASE_ANDROID_APP_ID: ${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          RELEASE_NOTES: ${{ inputs.release_notes || github.ref_name }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          trap 'rm -f "$SA_FILE"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$SA_FILE"
+          GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools appdistribution:distribute \
+            build/app/outputs/flutter-apk/grimgrind.apk \
+            --app "$FIREBASE_ANDROID_APP_ID" \
+            --groups household \
+            --release-notes "$RELEASE_NOTES"
 
   ios:
     needs: verify
