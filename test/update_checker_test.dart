@@ -66,6 +66,9 @@ void main() {
       },
     );
 
+    tester.platformDispatcher.localesTestValue = const [Locale('cs', 'CZ')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
     await tester.pumpWidget(
       GrimGrindApp(store: store, updateService: updateService),
     );

@@ -7,6 +7,8 @@ void main() {
   testWidgets('onboarding leads into sample mansion feed, deck, bank and leaderboard', (
     tester,
   ) async {
+    tester.platformDispatcher.localesTestValue = const [Locale('cs', 'CZ')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
     final store = MansionStore(clock: () => DateTime(2026, 7, 29, 12, 0));
     await tester.pumpWidget(GrimGrindApp(store: store));
     await tester.pumpAndSettle();
@@ -62,8 +64,8 @@ void main() {
     // Deck automatically closes back to Chronicle after playing a card
     expect(find.byType(NavigationBar), findsOneWidget);
 
-    // Open Pouch
-    await tester.tap(find.text('Pouch'));
+    // Open Pouch (Mešec in Czech)
+    await tester.tap(find.text('Mešec'));
     await tester.pumpAndSettle();
     expect(find.text('Mešec & Směna u Ruky'), findsOneWidget);
     expect(find.textContaining('Požádat Ruku o směnu'), findsOneWidget);

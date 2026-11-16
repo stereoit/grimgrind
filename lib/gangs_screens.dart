@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'mansion_store.dart';
 import 'models.dart';
+import 'sound_service.dart';
 import 'theme_package.dart';
 
 const _voidBg = Color(0xFF0B0B0D);
@@ -156,7 +157,7 @@ class _BloodWineButton extends StatelessWidget {
           ),
         ),
       ),
-      onPressed: onPressed,
+      onPressed: withButtonSound(onPressed),
       icon: icon != null
           ? Icon(icon, size: 17, color: onPressed != null ? _goldAccent : _mutedStone)
           : const SizedBox.shrink(),
@@ -738,7 +739,9 @@ class MyGangsPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () => showAcceptInviteDialog(context, store),
+                      onPressed: withButtonSound(
+                        () => showAcceptInviteDialog(context, store),
+                      ),
                       icon: const Icon(
                         Icons.vpn_key_outlined,
                         size: 17,

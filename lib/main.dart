@@ -1,10 +1,13 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
+import 'app_strings.dart';
 import 'gangs_screens.dart';
 import 'mansion_store.dart';
 import 'models.dart';
+import 'sound_service.dart';
 import 'theme_package.dart';
 import 'update_checker.dart';
 
@@ -53,12 +56,21 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
       animation: store,
       builder: (context, _) {
         final activeTheme = store.activeTheme;
+        SoundService.instance.updateTheme(activeTheme);
         return ThemeScope(
           theme: activeTheme,
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'GrimGrind',
             theme: activeTheme.buildThemeData(),
+            supportedLocales: AppStrings.supportedLocales,
+            localeResolutionCallback: AppStrings.resolveLocale,
+            localizationsDelegates: const [
+              AppStrings.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
             home: !store.isReady
                 ? OnboardingFlow(store: store)
                 : MansionShell(
@@ -99,7 +111,34 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _introIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    widget.store.addListener(_syncIntroMusic);
+    _syncIntroMusic();
+  }
+
+  @override
+  void didUpdateWidget(covariant OnboardingFlow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) {
+      oldWidget.store.removeListener(_syncIntroMusic);
+      widget.store.addListener(_syncIntroMusic);
+    }
+    _syncIntroMusic();
+  }
+
+  void _syncIntroMusic() {
+    if (!widget.store.hasSeenIntro) {
+      SoundService.instance.startIntroMusic();
+    } else {
+      SoundService.instance.stopIntroMusic();
+    }
+  }
+
+  @override
   void dispose() {
+    widget.store.removeListener(_syncIntroMusic);
+    SoundService.instance.stopIntroMusic();
     _pageController.dispose();
     super.dispose();
   }
@@ -123,7 +162,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   Widget _buildIntroPages(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final slides = theme.onboardingSlides;
+    final s = AppStrings.of(context);
+    final slides = s.onboardingSlidesFor(theme);
 
     return Scaffold(
       body: SafeArea(
@@ -143,8 +183,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     ),
                   ),
                   TextButton(
-                    onPressed: widget.store.completeIntro,
-                    child: const Text('Přeskočit'),
+                    onPressed: withButtonSound(widget.store.completeIntro),
+                    child: Text(s.skip),
                   ),
                 ],
               ),
@@ -235,7 +275,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: () {
+                      onPressed: withButtonSound(() {
                         if (_introIndex < slides.length - 1) {
                           _pageController.nextPage(
                             duration: const Duration(milliseconds: 260),
@@ -244,11 +284,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                         } else {
                           widget.store.completeIntro();
                         }
-                      },
+                      }),
                       child: Text(
                         _introIndex < slides.length - 1
-                            ? 'Další karta pravidel'
-                            : 'Vstoupit do Sídla',
+                            ? s.nextRuleCard
+                            : s.enterMansion,
                       ),
                     ),
                   ),
@@ -352,6 +392,7 @@ class _AuthGateScreenState extends State<_AuthGateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       backgroundColor: _voidBg,
       body: SafeArea(
@@ -382,9 +423,9 @@ class _AuthGateScreenState extends State<_AuthGateScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
-                      'BRÁNA DO SÍDLA',
-                      style: TextStyle(
+                    Text(
+                      s.authEyebrow,
+                      style: const TextStyle(
                         color: _goldAccent,
                         fontSize: 11,
                         letterSpacing: 2.8,
@@ -514,32 +555,34 @@ class _AuthGateScreenState extends State<_AuthGateScreen> {
                             side: const BorderSide(color: _bloodBorder),
                           ),
                         ),
-                        onPressed: _isSubmitting ? null : _submitCredentials,
+                        onPressed: _isSubmitting
+                            ? null
+                            : withButtonSound(_submitCredentials),
                         icon: const Icon(Icons.key_outlined, size: 18),
                         label: Text(
                           _isSubmitting
-                              ? 'Ověřuji pečeť...'
+                              ? s.authVerifyingSeal
                               : (_isRegisterMode
-                                    ? 'Vytvořit účet'
-                                    : 'Vstoupit do Sídla'),
+                                    ? s.authCreateAccountBtn
+                                    : s.authSignInBtn),
                         ),
                       ),
                       const SizedBox(height: 16),
                       Row(
-                        children: const [
-                          Expanded(child: Divider(color: _gothBorder)),
+                        children: [
+                          const Expanded(child: Divider(color: _gothBorder)),
                           Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: Text(
-                              'NEBO',
-                              style: TextStyle(
+                              s.authOr,
+                              style: const TextStyle(
                                 color: _mutedStone,
                                 fontSize: 11,
                                 letterSpacing: 1.6,
                               ),
                             ),
                           ),
-                          Expanded(child: Divider(color: _gothBorder)),
+                          const Expanded(child: Divider(color: _gothBorder)),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -553,13 +596,15 @@ class _AuthGateScreenState extends State<_AuthGateScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        onPressed: _isSubmitting ? null : _signInWithGoogle,
+                        onPressed: _isSubmitting
+                            ? null
+                            : withButtonSound(_signInWithGoogle),
                         icon: const Icon(
                           Icons.g_mobiledata,
                           color: _goldAccent,
                           size: 24,
                         ),
-                        label: const Text('Pokračovat přes Google'),
+                        label: Text(s.authContinueGoogle),
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
@@ -572,13 +617,15 @@ class _AuthGateScreenState extends State<_AuthGateScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        onPressed: _isSubmitting ? null : _continueAsGuest,
+                        onPressed: _isSubmitting
+                            ? null
+                            : withButtonSound(_continueAsGuest),
                         icon: const Icon(
                           Icons.person_outline,
                           color: _goldAccent,
                           size: 18,
                         ),
-                        label: const Text('Pokračovat anonymně jako host'),
+                        label: Text(s.authContinueGuest),
                       ),
                     ],
                   ),
@@ -677,7 +724,9 @@ class _EmailVerificationNoticeScreen extends StatelessWidget {
                         side: const BorderSide(color: _bloodBorder),
                       ),
                     ),
-                    onPressed: store.acknowledgeVerificationEmail,
+                    onPressed: withButtonSound(
+                      store.acknowledgeVerificationEmail,
+                    ),
                     icon: const Icon(Icons.arrow_forward, size: 18),
                     label: const Text('Pokračovat k tvorbě avatara'),
                   ),
@@ -723,6 +772,7 @@ class _CreateAvatarScreenState extends State<_CreateAvatarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       backgroundColor: _voidBg,
       body: SafeArea(
@@ -753,9 +803,9 @@ class _CreateAvatarScreenState extends State<_CreateAvatarScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    const Text(
-                      'STVOŘENÍ AVATARA',
-                      style: TextStyle(
+                    Text(
+                      s.createAvatarEyebrow,
+                      style: const TextStyle(
                         color: _goldAccent,
                         fontSize: 11,
                         letterSpacing: 2.8,
@@ -820,14 +870,14 @@ class _CreateAvatarScreenState extends State<_CreateAvatarScreen> {
                             side: const BorderSide(color: _bloodBorder),
                           ),
                         ),
-                        onPressed: () {
+                        onPressed: withButtonSound(() {
                           widget.store.saveAvatar(
                             nickname: _nicknameController.text,
                             sex: _selectedSex,
                           );
-                        },
+                        }),
                         icon: const Icon(Icons.arrow_forward, size: 18),
-                        label: const Text('Pokračovat do Sídla'),
+                        label: Text(s.continueToMansion),
                       ),
                     ],
                   ),
@@ -882,6 +932,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -905,7 +956,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            const Text('Vstup do Gangu', style: TextStyle(fontSize: 28)),
+            Text(s.gangSetupTitle, style: const TextStyle(fontSize: 28)),
             const SizedBox(height: 8),
             const Text(
               'Zakládající člen získá roli Ruky (nastavuje kurz Coin → Kč a schvaluje směny) a pozve ostatní přes zvací kód.',
@@ -964,7 +1015,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               FilledButton.icon(
                 onPressed: _isSubmitting
                     ? null
-                    : () async {
+                    : withButtonSound(() async {
                         final messenger = ScaffoldMessenger.of(context);
                         setState(() => _isSubmitting = true);
                         final ok = await widget.store.createGangAsync(
@@ -985,12 +1036,10 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                             ),
                           );
                         }
-                      },
+                      }),
                 icon: const Icon(Icons.castle_outlined),
                 label: Text(
-                  _isSubmitting
-                      ? 'Zakládám Gang...'
-                      : 'Založit Gang a stát se Rukou',
+                  _isSubmitting ? s.gangSetupCreating : s.gangSetupCreateBtn,
                 ),
               ),
             ] else ...[
@@ -1020,7 +1069,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               FilledButton.icon(
                 onPressed: _isSubmitting
                     ? null
-                    : () async {
+                    : withButtonSound(() async {
                         final messenger = ScaffoldMessenger.of(context);
                         setState(() => _isSubmitting = true);
                         final ok = await widget.store.joinGangByCodeAsync(
@@ -1040,17 +1089,17 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                             ),
                           );
                         }
-                      },
+                      }),
                 icon: const Icon(Icons.login),
                 label: Text(
-                  _isSubmitting ? 'Připojuji se...' : 'Připojit se ke Gangu',
+                  _isSubmitting ? s.gangSetupJoining : s.gangSetupJoinBtn,
                 ),
               ),
             ],
             const SizedBox(height: 12),
             TextButton(
-              onPressed: widget.store.startSampleMansion,
-              child: const Text('Rychlý start s ukázkovým Sídlem'),
+              onPressed: withButtonSound(widget.store.startSampleMansion),
+              child: Text(s.gangSetupQuickStart),
             ),
           ],
         ),
@@ -1104,10 +1153,12 @@ class _MansionShellState extends State<MansionShell> {
   }
 
   void _openDeck() {
+    SoundService.instance.playOpenDeck();
+    final s = AppStrings.of(context);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Deck')),
+          appBar: AppBar(title: Text(s.deckTitle)),
           body: SafeArea(child: DeckPage(store: widget.store)),
         ),
       ),
@@ -1117,6 +1168,8 @@ class _MansionShellState extends State<MansionShell> {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
+    final theme = ThemeScope.of(context);
+    final s = AppStrings.of(context);
     final member = store.currentMember!;
     final level = store.monthlyLevelFor(member.id);
     final heat = store.heatLevelFor(member);
@@ -1149,7 +1202,7 @@ class _MansionShellState extends State<MansionShell> {
               style: const TextStyle(letterSpacing: 2.2, fontSize: 16),
             ),
             Text(
-              '${member.nickname} • ${level.label} • ${heat.label}',
+              '${member.nickname} • ${s.monthlyLevelLabel(level, theme)} • ${s.heatLabel(heat, theme)}',
               style: const TextStyle(
                 color: Color(0xFF968C80),
                 fontSize: 11,
@@ -1180,17 +1233,19 @@ class _MansionShellState extends State<MansionShell> {
               foregroundColor: const Color(0xFFF7EEE0),
               onPressed: _openDeck,
               icon: const Icon(Icons.auto_stories),
-              label: const Text('Zahrát kartu'),
+              label: Text(s.playCardFab),
             )
           : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (value) => setState(() => index = value),
+        onDestinationSelected: withButtonSound1(
+          (value) => setState(() => index = value),
+        ),
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.dynamic_feed_outlined),
-            selectedIcon: Icon(Icons.dynamic_feed),
-            label: 'Chronicle',
+          NavigationDestination(
+            icon: const Icon(Icons.dynamic_feed_outlined),
+            selectedIcon: const Icon(Icons.dynamic_feed),
+            label: s.navChronicle,
           ),
           NavigationDestination(
             icon: Badge(
@@ -1203,17 +1258,17 @@ class _MansionShellState extends State<MansionShell> {
               label: Text('$pendingCount'),
               child: const Icon(Icons.savings),
             ),
-            label: 'Pouch',
+            label: s.navPouch,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
-            label: 'Žebříček',
+          NavigationDestination(
+            icon: const Icon(Icons.emoji_events_outlined),
+            selectedIcon: const Icon(Icons.emoji_events),
+            label: s.navLeaderboard,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profil',
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: s.navProfile,
           ),
         ],
       ),
@@ -1237,19 +1292,20 @@ class FeedPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final entries = store.feedEntries;
 
     return CustomScrollView(
       key: const PageStorageKey('feed'),
       slivers: [
         if (entries.isEmpty)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
             child: _EmptyState(
               icon: Icons.dynamic_feed_outlined,
               imageAsset: 'assets/branding/chronicle_empty.png',
-              title: 'Kronika sídla mlčí',
-              text: 'Zatím žádná zahraná karta. Pavučiny čekají na první zápis.',
+              title: s.feedEmptyTitle,
+              text: s.feedEmptyText,
             ),
           )
         else
@@ -1620,6 +1676,8 @@ class _DeckPageState extends State<DeckPage> {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
+    final theme = ThemeScope.of(context);
+    final s = AppStrings.of(context);
     final member = store.currentMember!;
     final level = store.monthlyLevelFor(member.id);
     final heat = store.heatLevelFor(member);
@@ -1638,22 +1696,28 @@ class _DeckPageState extends State<DeckPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'KNIHA KARET SÍDLA',
-                  style: TextStyle(
+                Text(
+                  s.deckEyebrow,
+                  style: const TextStyle(
                     color: Color(0xFFC6A15B),
                     letterSpacing: 2,
                     fontSize: 10,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Vyber splněnou kartu',
-                  style: TextStyle(fontSize: 26),
+                Text(
+                  s.deckHeading,
+                  style: const TextStyle(fontSize: 26),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Level ${level.label} (+${level.bonusPercent} %) • ${heat.label} (+${heat.bonusPercent} %) = celkem +$totalBonus % Coinů.',
+                  s.deckBonusSummary(
+                    s.monthlyLevelLabel(level, theme),
+                    level.bonusPercent,
+                    s.heatLabel(heat, theme),
+                    heat.bonusPercent,
+                    totalBonus,
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF968C80),
                     fontSize: 12,
@@ -1665,16 +1729,20 @@ class _DeckPageState extends State<DeckPage> {
                   child: Row(
                     children: [
                       FilterChip(
-                        label: const Text('Všechny (17)'),
+                        label: Text(s.deckAllFilter(store.deck.length)),
                         selected: _filter == null,
-                        onSelected: (_) => setState(() => _filter = null),
+                        onSelected: withButtonSound1(
+                          (_) => setState(() => _filter = null),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       for (final diff in ChoreDifficulty.values) ...[
                         FilterChip(
-                          label: Text(diff.label),
+                          label: Text(s.difficultyLabel(diff, theme)),
                           selected: _filter == diff,
-                          onSelected: (_) => setState(() => _filter = diff),
+                          onSelected: withButtonSound1(
+                            (_) => setState(() => _filter = diff),
+                          ),
                         ),
                         const SizedBox(width: 8),
                       ],
@@ -1701,7 +1769,9 @@ class _DeckPageState extends State<DeckPage> {
               return _DeckCardTile(
                 chore: chore,
                 effectiveCoins: coins,
-                onTap: () => _confirmPlayCard(context, store, chore, coins),
+                onTap: withButtonSound(
+                  () => _confirmPlayCard(context, store, chore, coins),
+                )!,
               );
             },
           ),
@@ -1749,7 +1819,9 @@ class _DeckCardTile extends StatelessWidget {
                       style: TextStyle(fontSize: 22, color: accent),
                     ),
                     Text(
-                      theme.difficultyLabel(chore.difficulty).toUpperCase(),
+                      AppStrings.of(context)
+                          .difficultyLabel(chore.difficulty, theme)
+                          .toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
                         letterSpacing: 1.4,
@@ -1825,6 +1897,7 @@ Future<void> _confirmPlayCard(
   ChoreDefinition chore,
   int effectiveCoins,
 ) async {
+  final s = AppStrings.of(context);
   final confirmed = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
@@ -1864,7 +1937,7 @@ Future<void> _confirmPlayCard(
                   child: _StatTile(
                     icon: Icons.schedule,
                     value: '${chore.minutes} min',
-                    label: 'ODHAD',
+                    label: s.estimateLabel,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1878,7 +1951,7 @@ Future<void> _confirmPlayCard(
                       iconSize: 16,
                       color: const Color(0xFFE9E0D0),
                     ),
-                    label: 'ZISK DO MEŠCE',
+                    label: s.pouchRewardLabel,
                   ),
                 ),
               ],
@@ -1892,7 +1965,7 @@ Future<void> _confirmPlayCard(
                 label: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Zahrát kartu (+'),
+                    Text(s.playCardPrefix),
                     _CoinAmount(
                       amount: effectiveCoins,
                       fontSize: 14,
@@ -1913,11 +1986,10 @@ Future<void> _confirmPlayCard(
   if (confirmed == true && context.mounted) {
     final played = store.playCard(chore);
     if (played != null) {
+      SoundService.instance.playCard();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Zahráno! +${played.coinsAwarded} připsáno do tvého Mešce.',
-          ),
+          content: Text(s.cardPlayedSnackbar(played.coinsAwarded)),
         ),
       );
       if (Navigator.of(context).canPop()) {
@@ -1938,6 +2010,7 @@ class BankPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final member = store.currentMember!;
     final bankCards = store.bankCardsFor(member.id);
     final pendingMine = store.pendingCardsFor(member.id);
@@ -1947,16 +2020,16 @@ class BankPage extends StatelessWidget {
       key: const PageStorageKey('bank'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
-        const Text(
-          'TVŮJ MEŠEC',
-          style: TextStyle(
+        Text(
+          s.pouchEyebrow,
+          style: const TextStyle(
             color: Color(0xFFC6A15B),
             letterSpacing: 2,
             fontSize: 10,
           ),
         ),
         const SizedBox(height: 4),
-        const Text('Mešec & Směna u Ruky', style: TextStyle(fontSize: 26)),
+        Text(s.pouchHeading, style: const TextStyle(fontSize: 26)),
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(20),
@@ -1980,11 +2053,14 @@ class BankPage extends StatelessWidget {
                       ? null
                       : () {
                           final req = store.requestExchange();
+                          if (req != null) {
+                            SoundService.instance.playConvertCoins();
+                          }
                           if (req != null && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Žádost o směnu ${req.totalCoins} zlaťáků odeslána Ruce.',
+                                  s.exchangeRequestedSnackbar(req.totalCoins),
                                 ),
                               ),
                             );
@@ -1993,8 +2069,8 @@ class BankPage extends StatelessWidget {
                   icon: const Icon(Icons.front_hand_outlined),
                   label: Text(
                     bankCards.isEmpty
-                        ? 'Mešec je prázdný'
-                        : 'Požádat Ruku o směnu (${bankCards.length})',
+                        ? s.pouchEmpty
+                        : s.requestExchangeBtn(bankCards.length),
                   ),
                 ),
               ),
@@ -2002,7 +2078,7 @@ class BankPage extends StatelessWidget {
           ),
         ),
         if (bankCards.isNotEmpty) ...[
-          const _SectionTitle('ZAHRANÉ KARTY V MEŠCI'),
+          _SectionTitle(s.playedCardsInPouchSection),
           ...bankCards.map(
             (card) => Card(
               child: ListTile(
@@ -2030,7 +2106,7 @@ class BankPage extends StatelessWidget {
           ),
         ],
         if (pendingMine.isNotEmpty) ...[
-          const _SectionTitle('MOJE KARTY ČEKAJÍCÍ NA POTVRZENÍ RUKOU'),
+          _SectionTitle(s.pendingCardsSection),
           ...pendingMine.map(
             (card) => Card(
               child: ListTile(
@@ -2050,7 +2126,7 @@ class BankPage extends StatelessWidget {
         ],
         if (store.isCurrentUserHand) ...[
           const Divider(height: 36),
-          const _SectionTitle('SPRÁVA RUKY (ZAKLADATEL)'),
+          _SectionTitle(s.handManagementSection),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -2059,28 +2135,31 @@ class BankPage extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     final created = store.closeMonth();
+                    if (created > 0) {
+                      SoundService.instance.playConvertCoins();
+                    } else {
+                      SoundService.instance.playButtonTap();
+                    }
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            'Měsíc uzavřen! Vygenerováno $created automatických žádostí o směnu.',
-                          ),
+                          content: Text(s.monthClosedSnackbar(created)),
                         ),
                       );
                     }
                   },
                   icon: const Icon(Icons.event_available),
-                  label: const Text('Uzavřít měsíc (Auto-směna & Výherce)'),
+                  label: Text(s.closeMonthBtn),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 12),
           if (store.pendingExchanges.isEmpty)
-            const Card(
+            Card(
               child: ListTile(
-                leading: Icon(Icons.check_circle_outline),
-                title: Text('Žádné čekající žádosti o směnu'),
+                leading: const Icon(Icons.check_circle_outline),
+                title: Text(s.noPendingExchanges),
               ),
             )
           else
@@ -2101,6 +2180,7 @@ class _PendingExchangeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final cards = store.playedCards
         .where((c) => req.cardIds.contains(c.id))
         .toList();
@@ -2133,11 +2213,11 @@ class _PendingExchangeCard extends StatelessWidget {
               ],
             ),
             if (req.isAutoMonthEnd)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Automatická uzávěrka měsíce',
-                  style: TextStyle(color: Color(0xFF968C80), fontSize: 11),
+                  s.autoMonthEndLabel,
+                  style: const TextStyle(color: Color(0xFF968C80), fontSize: 11),
                 ),
               ),
             const Divider(),
@@ -2154,9 +2234,11 @@ class _PendingExchangeCard extends StatelessWidget {
                   fontWeight: FontWeight.normal,
                 ),
                 trailing: IconButton(
-                  tooltip: 'Neuznat kartu',
+                  tooltip: s.rejectCardTooltip,
                   icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => store.rejectCardInRequest(req.id, c.id),
+                  onPressed: withButtonSound(
+                    () => store.rejectCardInRequest(req.id, c.id),
+                  ),
                 ),
               ),
             ),
@@ -2164,9 +2246,12 @@ class _PendingExchangeCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () => store.approveExchange(req.id),
+                onPressed: () {
+                  SoundService.instance.playConvertCoins();
+                  store.approveExchange(req.id);
+                },
                 icon: const Icon(Icons.verified_outlined),
-                label: Text('Schválit směnu (${req.totalCoins})'),
+                label: Text(s.approveExchangeBtn(req.totalCoins)),
               ),
             ),
           ],
@@ -2195,21 +2280,22 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final rows = widget.store.buildLeaderboard(period: _period, sort: _sort);
     return ListView(
       key: const PageStorageKey('leaderboard'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
-        const Text(
-          'SÍŇ HRDINŮ SÍDLA',
-          style: TextStyle(
+        Text(
+          s.leaderboardEyebrow,
+          style: const TextStyle(
             color: Color(0xFFC6A15B),
             letterSpacing: 2,
             fontSize: 10,
           ),
         ),
         const SizedBox(height: 4),
-        const Text('Leaderboard Hráčů', style: TextStyle(fontSize: 26)),
+        Text(s.leaderboardHeading, style: const TextStyle(fontSize: 26)),
         const SizedBox(height: 4),
         const Text(
           'Počítají se výhradně karty potvrzené směnou u Ruky.',
@@ -2469,6 +2555,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final store = widget.store;
     final gang = store.gang!;
     final updateService = widget.updateService;
@@ -2479,13 +2566,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         Text(gang.name, style: const TextStyle(fontSize: 22)),
         const SizedBox(height: 4),
         Text(
-          'Zvací kód pro členy Gangu: ${gang.inviteCode}',
+          s.inviteCodeLine(gang.inviteCode),
           style: const TextStyle(color: Color(0xFFC6A15B)),
         ),
         if (store.authUserEmail != null) ...[
           const SizedBox(height: 4),
           Text(
-            'Účet: ${store.authUserEmail}',
+            s.accountLine(store.authUserEmail!),
             style: const TextStyle(color: Color(0xFF968C80), fontSize: 12),
           ),
         ],
@@ -2494,38 +2581,38 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           children: [
             Expanded(
               child: FilledButton.icon(
-                onPressed: () {
+                onPressed: withButtonSound(() {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => MyGangsPage(store: store),
                     ),
                   );
-                },
+                }),
                 icon: const Icon(Icons.groups_outlined),
-                label: const Text('Moje Gangy'),
+                label: Text(s.myGangsBtn),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
+                onPressed: withButtonSound(() {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) =>
                           ManageGangPage(store: store, gangId: gang.id),
                     ),
                   );
-                },
+                }),
                 icon: const Icon(Icons.share_outlined),
-                label: const Text('Pozvat / Správa'),
+                label: Text(s.inviteManageBtn),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        const Text(
-          'PŘEPNOUT ČLENA (TEST / DOMÁCNOST)',
-          style: TextStyle(
+        Text(
+          s.switchMemberSection,
+          style: const TextStyle(
             fontSize: 10,
             letterSpacing: 1.6,
             color: Color(0xFF968C80),
@@ -2545,7 +2632,9 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                   : const Color(0xFF968C80),
             ),
             title: Text(m.nickname),
-            subtitle: Text(m.isHand ? 'Zakladatel • Ruka' : 'Člen Gangu'),
+            subtitle: Text(
+              m.isHand ? s.roleHandSubtitle : s.roleMemberSubtitle,
+            ),
             onTap: () {
               store.switchActiveMember(m.id);
               _renameController.text = store.currentMember?.nickname ?? '';
@@ -2558,16 +2647,17 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             Expanded(
               child: TextField(
                 controller: _renameController,
-                decoration: const InputDecoration(
-                  labelText: 'Změnit moji přezdívku',
+                decoration: InputDecoration(
+                  labelText: s.renameNicknameLabel,
                 ),
               ),
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: () =>
-                  store.renameCurrentMember(_renameController.text),
-              child: const Text('Uložit'),
+              onPressed: withButtonSound(
+                () => store.renameCurrentMember(_renameController.text),
+              ),
+              child: Text(s.saveBtn),
             ),
           ],
         ),
@@ -2580,15 +2670,15 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               Icons.system_update_alt,
               color: Color(0xFFC6A15B),
             ),
-            title: const Text('Aktualizace aplikace'),
+            title: Text(s.appUpdatesTitle),
             subtitle: FutureBuilder<({String version, int buildNumber})>(
               future: updateService.currentAppVersion(),
               builder: (context, snapshot) {
                 final v = snapshot.data;
                 return Text(
                   v == null
-                      ? 'Zkontrolovat novou verzi'
-                      : 'Aktuální verze ${v.version} (#${v.buildNumber})',
+                      ? s.checkNewVersion
+                      : s.currentVersionLine(v.version, v.buildNumber),
                 );
               },
             ),
@@ -2600,8 +2690,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 await updateService.openUpdateUrl(result.info);
               } else {
                 messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Máš nejnovější dostupnou verzi.'),
+                  SnackBar(
+                    content: Text(s.latestVersionSnackbar),
                   ),
                 );
               }

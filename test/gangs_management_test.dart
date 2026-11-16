@@ -118,6 +118,8 @@ void main() {
     testWidgets('MyGangsPage -> ManageGangPage -> dangerous delete requires exact gang name', (
       tester,
     ) async {
+      tester.platformDispatcher.localesTestValue = const [Locale('cs', 'CZ')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
       final store = MansionStore(clock: () => DateTime(2026, 8, 10, 12, 0));
       store.createGang(gangName: 'Raven Manor', founderNickname: 'Hand');
 

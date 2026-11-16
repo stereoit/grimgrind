@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:chore_cash/gangs_screens.dart';
 import 'package:chore_cash/mansion_store.dart';
 import 'package:chore_cash/models.dart';
@@ -42,6 +44,11 @@ void main() {
         expect(gothic.heatColors.containsKey(heat), isTrue);
         expect(gothic.heatIcons.containsKey(heat), isTrue);
         expect(gothic.heatLevelLabels[heat], isNotEmpty);
+      }
+
+      for (final soundAsset in gothic.soundPack.allAssets) {
+        expect(soundAsset, startsWith('assets/sounds/gothic_mansion/'));
+        expect(File(soundAsset).existsSync(), isTrue, reason: soundAsset);
       }
     });
 

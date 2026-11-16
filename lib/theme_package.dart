@@ -30,6 +30,40 @@ class ThemeChoreOverride {
   final String? symbol;
 }
 
+/// Sound asset paths bundled with a [GameThemePackage].
+class ThemeSoundPack {
+  const ThemeSoundPack({
+    required this.introMusic,
+    required this.openDeck,
+    required this.playCard,
+    required this.convertCoins,
+    required this.buttonTap,
+  });
+
+  /// Looping background music played during the onboarding intro.
+  final String introMusic;
+
+  /// Sound effect played when opening the chore deck.
+  final String openDeck;
+
+  /// Sound effect played when a card is played/completed.
+  final String playCard;
+
+  /// Sound effect played when coins are converted/exchanged.
+  final String convertCoins;
+
+  /// Subtle tactile sound effect played when touching buttons.
+  final String buttonTap;
+
+  List<String> get allAssets => [
+    introMusic,
+    openDeck,
+    playCard,
+    convertCoins,
+    buttonTap,
+  ];
+}
+
 /// Complete visual, asset, and terminology contract for a GrimGrind theme.
 ///
 /// Game mechanics (`baseCoins`, `minutes`, `minCards`, `bonusRate`,
@@ -79,6 +113,7 @@ class GameThemePackage {
     required this.onboardingWorldArt,
     required this.exchangeArt,
     required this.monthTrophyArt,
+    required this.soundPack,
     // Terminology & Copy
     required this.appWordmark,
     required this.groupNoun,
@@ -153,6 +188,7 @@ class GameThemePackage {
   final String onboardingWorldArt;
   final String exchangeArt;
   final String monthTrophyArt;
+  final ThemeSoundPack soundPack;
 
   // Terminology & Copy
   final String appWordmark;
@@ -340,6 +376,13 @@ class ThemeRegistry {
     onboardingWorldArt: 'assets/art/mansion.png',
     exchangeArt: 'assets/art/the_hand_exchange.png',
     monthTrophyArt: 'assets/art/month_trophy.png',
+    soundPack: ThemeSoundPack(
+      introMusic: 'assets/sounds/gothic_mansion/intro_music.wav',
+      openDeck: 'assets/sounds/gothic_mansion/open_deck.wav',
+      playCard: 'assets/sounds/gothic_mansion/play_card.wav',
+      convertCoins: 'assets/sounds/gothic_mansion/convert_coins.wav',
+      buttonTap: 'assets/sounds/gothic_mansion/button_tap.wav',
+    ),
     appWordmark: 'GRIMGRIND',
     groupNoun: 'Sídlo',
     groupGenitive: 'Sídla',

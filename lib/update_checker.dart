@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'app_strings.dart';
+import 'sound_service.dart';
+
 class UpdateInfo {
   const UpdateInfo({
     required this.latestBuildNumber,
@@ -169,6 +172,7 @@ class UpdateBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final info = result.info;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -192,7 +196,7 @@ class UpdateBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Nová verze ${info.latestVersion} (#${info.latestBuildNumber})',
+                  s.newVersionTitle(info.latestVersion, info.latestBuildNumber),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFE9E0D0),
@@ -219,10 +223,10 @@ class UpdateBanner extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: onDismiss,
-                child: const Text(
-                  'Později',
-                  style: TextStyle(color: Color(0xFF968C80)),
+                onPressed: withButtonSound(onDismiss),
+                child: Text(
+                  s.updateLaterBtn,
+                  style: const TextStyle(color: Color(0xFF968C80)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -235,9 +239,9 @@ class UpdateBanner extends StatelessWidget {
                     vertical: 8,
                   ),
                 ),
-                onPressed: onUpdate,
+                onPressed: withButtonSound(onUpdate),
                 icon: const Icon(Icons.download_rounded, size: 16),
-                label: const Text('Aktualizovat'),
+                label: Text(s.updateNowBtn),
               ),
             ],
           ),
