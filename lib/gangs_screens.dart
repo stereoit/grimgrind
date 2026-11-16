@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'mansion_store.dart';
 import 'models.dart';
+import 'theme_package.dart';
 
 const _voidBg = Color(0xFF0B0B0D);
 const _coalSurface = Color(0xFF17171A);
@@ -1305,6 +1306,12 @@ class ManageGangPage extends StatelessWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: 16),
+              _ThemePackageCard(
+                store: store,
+                gang: gang,
+                isOwner: isOwner,
+              ),
             ],
           ),
         );
@@ -1444,3 +1451,117 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
     );
   }
 }
+
+class _ThemePackageCard extends StatelessWidget {
+  const _ThemePackageCard({
+    required this.store,
+    required this.gang,
+    required this.isOwner,
+  });
+
+  final MansionStore store;
+  final Gang gang;
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context) {
+    final activeTheme = ThemeRegistry.resolve(gang.themeId);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _coalSurface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _gothBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'TÉMA / MOTIV GANGU',
+                style: TextStyle(
+                  color: _goldAccent,
+                  letterSpacing: 1.6,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                isOwner ? 'POUZE RUKA' : 'JEN ČTENÍ',
+                style: const TextStyle(color: _mutedStone, fontSize: 10),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isOwner
+                ? 'Vlastník může pro nové období zvolit balíček tématu. Výchozím tématem je Gothic Mansion.'
+                : 'Aktivní téma nastavené vlastníkem Gangu.',
+            style: const TextStyle(color: _mutedStone, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          for (final theme in ThemeRegistry.all)
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: isOwner
+                  ? () => store.updateGangTheme(gang.id, theme.id)
+                  : null,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _voidBg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.id == activeTheme.id
+                        ? _goldAccent
+                        : _gothBorder,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      theme.id == activeTheme.id
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_off,
+                      color: theme.id == activeTheme.id
+                          ? _goldAccent
+                          : _mutedStone,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            theme.displayName,
+                            style: const TextStyle(
+                              color: _boneText,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            theme.subtitle,
+                            style: const TextStyle(
+                              color: _mutedStone,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+

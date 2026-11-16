@@ -283,7 +283,11 @@ class Gang {
     required this.inviteCode,
     required this.founderId,
     this.coinsPerCzk = 10,
+    this.themeId = defaultThemeId,
   });
+
+  static const String defaultThemeId = 'gothic_mansion';
+  static const String inviteBaseUrl = 'https://grim-grind.web.app/join';
 
   final String id;
   String name;
@@ -293,7 +297,8 @@ class Gang {
   /// How many Coins equal 1 CZK (editable by the Hand / founder).
   int coinsPerCzk;
 
-  static const String inviteBaseUrl = 'https://grim-grind.web.app/join';
+  /// Active theme package ID for this Gang (defaults to Gothic Mansion).
+  String themeId;
 
   String get inviteUrl => '$inviteBaseUrl?code=${Uri.encodeComponent(inviteCode)}';
 }

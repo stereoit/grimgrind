@@ -73,6 +73,7 @@ class FirebaseGangRepository {
     required MemberSex founderSex,
     required String inviteCode,
     int coinsPerCzk = 10,
+    String themeId = Gang.defaultThemeId,
   }) async {
     final user = currentUser;
     if (!isFirebaseReady || user == null) return null;
@@ -86,6 +87,7 @@ class FirebaseGangRepository {
       'inviteCode': cleanCode,
       'founderId': user.uid,
       'coinsPerCzk': coinsPerCzk.clamp(1, 1000),
+      'themeId': themeId,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
@@ -185,6 +187,17 @@ class FirebaseGangRepository {
       'inviteCode': newCode.trim().toUpperCase(),
     });
     await batch.commit();
+  }
+
+  Future<void> updateGangTheme({
+    required String gangId,
+    required String themeId,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+    await _db.collection('gangs').doc(gangId).update({
+      'themeId': themeId,
+    });
   }
 
   Future<void> deleteGang({required String gangId}) async {

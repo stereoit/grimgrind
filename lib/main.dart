@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'gangs_screens.dart';
 import 'mansion_store.dart';
 import 'models.dart';
+import 'theme_package.dart';
 import 'update_checker.dart';
 
 void main() => runApp(const GrimGrindApp());
@@ -29,76 +30,37 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'GrimGrind',
-      theme: _theme,
-      home: AnimatedBuilder(
-        animation: store,
-        builder: (context, _) {
-          if (!store.isReady) {
-            return OnboardingFlow(store: store);
-          }
-          return MansionShell(
-            store: store,
-            updateService: widget.updateService,
-          );
-        },
-      ),
+    return AnimatedBuilder(
+      animation: store,
+      builder: (context, _) {
+        final activeTheme = store.activeTheme;
+        return ThemeScope(
+          theme: activeTheme,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'GrimGrind',
+            theme: activeTheme.buildThemeData(),
+            home: !store.isReady
+                ? OnboardingFlow(store: store)
+                : MansionShell(
+                    store: store,
+                    updateService: widget.updateService,
+                  ),
+          ),
+        );
+      },
     );
   }
 }
 
-final _theme = ThemeData(
-  brightness: Brightness.dark,
-  scaffoldBackgroundColor: const Color(0xFF0B0B0D),
-  colorScheme: const ColorScheme.dark(
-    primary: Color(0xFFC6A15B),
-    secondary: Color(0xFF6E1830),
-    surface: Color(0xFF17171A),
-    onSurface: Color(0xFFE9E0D0),
-  ),
-  fontFamily: 'serif',
-  dividerColor: const Color(0xFF3B3329),
-  cardTheme: const CardThemeData(
-    color: Color(0xFF17171A),
-    elevation: 0,
-    shape: RoundedRectangleBorder(
-      side: BorderSide(color: Color(0xFF3B3329)),
-      borderRadius: BorderRadius.all(Radius.circular(10)),
-    ),
-  ),
-  navigationBarTheme: const NavigationBarThemeData(
-    backgroundColor: Color(0xFF101012),
-    indicatorColor: Color(0xFF41212B),
-    labelTextStyle: WidgetStatePropertyAll(TextStyle(fontSize: 12)),
-  ),
-  snackBarTheme: const SnackBarThemeData(
-    backgroundColor: Color(0xFF6E1830),
-    contentTextStyle: TextStyle(color: Color(0xFFF7EEE0)),
-  ),
-);
+Color _difficultyColor(BuildContext context, ChoreDifficulty difficulty) =>
+    ThemeScope.of(context).difficultyColor(difficulty);
 
-Color _difficultyColor(ChoreDifficulty difficulty) => switch (difficulty) {
-  ChoreDifficulty.easy => const Color(0xFF66816A),
-  ChoreDifficulty.medium => const Color(0xFFC6A15B),
-  ChoreDifficulty.hard => const Color(0xFF9B3B48),
-  ChoreDifficulty.special => const Color(0xFF846BA3),
-};
+Color _heatColor(BuildContext context, HeatLevel heat) =>
+    ThemeScope.of(context).heatColor(heat);
 
-Color _heatColor(HeatLevel heat) => switch (heat) {
-  HeatLevel.coldAsh => const Color(0xFF625B53),
-  HeatLevel.glowingEmbers => const Color(0xFFD97B29),
-  HeatLevel.blazingForge => const Color(0xFFE5A435),
-  HeatLevel.hellfire => const Color(0xFFE04826),
-};
-
-IconData _heatIcon(HeatLevel heat) => switch (heat) {
-  HeatLevel.coldAsh => Icons.ac_unit_outlined,
-  HeatLevel.glowingEmbers => Icons.local_fire_department_outlined,
-  HeatLevel.blazingForge => Icons.local_fire_department,
-  HeatLevel.hellfire => Icons.whatshot,
-};
+IconData _heatIcon(BuildContext context, HeatLevel heat) =>
+    ThemeScope.of(context).heatIcon(heat);
 
 // =============================================================================
 // Onboarding: 3 Intro Cards + Create / Join Gang
@@ -132,29 +94,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 
   Widget _buildIntroPages(BuildContext context) {
-    const slides = [
-      (
-        eyebrow: 'PRAVIDLO I • KNIHA KARET',
-        title: 'Sdílený Deck Sídla',
-        text:
-            'Celá domácnost vybírá ze stejné knihy 17 úkolů. Žádné zamykání ani čekání – jakmile úkol splníš, rovnou kartu zahraješ do společného Feedu.',
-        image: 'assets/art/spellbook_deck.png',
-      ),
-      (
-        eyebrow: 'PRAVIDLO II • COINY, LEVEL & HEAT',
-        title: 'Žhavé Násobiče Odměn',
-        text:
-            'Během měsíce sbíráš karty a postupuješ od Probuzeného až k Nesmrtelnému. Pravidelným hraním navíc rozdmýcháš Heat, který chladne při lenošení.',
-        image: 'assets/art/mansion.png',
-      ),
-      (
-        eyebrow: 'PRAVIDLO III • RUKA & LEADERBOARD',
-        title: 'Směň Bank a Ovládni Sídlo',
-        text:
-            'Coiny padají do tvého Banku. Kdykoliv požádej Ruku (Zakladatele) o směnu na skutečné peníze. Teprve schválené směny se počítají do Leaderboardu!',
-        image: 'assets/art/the_hand_exchange.png',
-      ),
-    ];
+    final theme = ThemeScope.of(context);
+    final slides = theme.onboardingSlides;
 
     return Scaffold(
       body: SafeArea(
@@ -165,12 +106,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'GRIMGRIND',
+                  Text(
+                    theme.appWordmark,
                     style: TextStyle(
                       letterSpacing: 3,
                       fontSize: 16,
-                      color: Color(0xFFC6A15B),
+                      color: theme.primaryAccent,
                     ),
                   ),
                   TextButton(
@@ -199,12 +140,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                             child: Container(
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: const Color(0xFF5A4931),
+                                  color: theme.subtleBorder,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Image.asset(
-                                slide.image,
+                                slide.imageAsset,
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -341,7 +282,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                'assets/art/mansion.png',
+                ThemeScope.of(context).onboardingWorldArt,
                 height: 180,
                 fit: BoxFit.cover,
               ),
@@ -744,12 +685,12 @@ class _FeedStatusStrip extends StatelessWidget {
         color: const Color(0xFF17171A),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: _heatColor(heat).withValues(alpha: 0.7),
+          color: _heatColor(context, heat).withValues(alpha: 0.7),
         ),
       ),
       child: Row(
         children: [
-          Icon(_heatIcon(heat), color: _heatColor(heat), size: 28),
+          Icon(_heatIcon(context, heat), color: _heatColor(context, heat), size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -804,11 +745,11 @@ class _FeedPlayedCardPost extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 17,
-                  backgroundColor: _heatColor(heat).withValues(alpha: 0.2),
+                  backgroundColor: _heatColor(context, heat).withValues(alpha: 0.2),
                   child: Icon(
-                    _heatIcon(heat),
+                    _heatIcon(context, heat),
                     size: 18,
-                    color: _heatColor(heat),
+                    color: _heatColor(context, heat),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -862,7 +803,7 @@ class _FeedPlayedCardPost extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/cards/${entry.choreId}.png',
+                    ThemeScope.of(context).cardAssetPath(entry.choreId!),
                     fit: BoxFit.cover,
                   ),
                   Positioned(
@@ -925,7 +866,7 @@ class _FeedExchangePost extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Image.asset(
-                  'assets/art/the_hand_exchange.png',
+                  ThemeScope.of(context).exchangeArt,
                   fit: BoxFit.cover,
                 ),
                 Container(
@@ -1025,7 +966,7 @@ class _FeedMonthDividerCard extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     Image.asset(
-                      'assets/art/month_trophy.png',
+                      ThemeScope.of(context).monthTrophyArt,
                       fit: BoxFit.cover,
                     ),
                     Container(
@@ -1192,7 +1133,8 @@ class _DeckCardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _difficultyColor(chore.difficulty);
+    final theme = ThemeScope.of(context);
+    final accent = _difficultyColor(context, chore.difficulty);
     final boosted = effectiveCoins > chore.baseCoins;
 
     return Card(
@@ -1212,11 +1154,11 @@ class _DeckCardTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      chore.symbol,
+                      theme.choreSymbol(chore),
                       style: TextStyle(fontSize: 22, color: accent),
                     ),
                     Text(
-                      chore.difficulty.label.toUpperCase(),
+                      theme.difficultyLabel(chore.difficulty).toUpperCase(),
                       style: TextStyle(
                         fontSize: 10,
                         letterSpacing: 1.4,
@@ -1230,7 +1172,7 @@ class _DeckCardTile extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: Image.asset(
-                      'assets/cards/${chore.id}.png',
+                      theme.cardAssetPath(chore.id),
                       width: double.infinity,
                       fit: BoxFit.cover,
                     ),
@@ -1314,7 +1256,7 @@ Future<void> _confirmPlayCard(
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.asset(
-                'assets/cards/${chore.id}.png',
+                ThemeScope.of(context).cardAssetPath(chore.id),
                 height: 220,
                 fit: BoxFit.cover,
               ),
@@ -1481,7 +1423,7 @@ class BankPage extends StatelessWidget {
                 leading: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: Image.asset(
-                    'assets/cards/${card.chore.id}.png',
+                    ThemeScope.of(context).cardAssetPath(card.chore.id),
                     width: 40,
                     height: 52,
                     fit: BoxFit.cover,
@@ -1755,13 +1697,9 @@ class _PlayerLeaderboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auraColor = _heatColor(data.heatLevel);
-    final auraGlow = switch (data.heatLevel) {
-      HeatLevel.coldAsh => 0.0,
-      HeatLevel.glowingEmbers => 12.0,
-      HeatLevel.blazingForge => 20.0,
-      HeatLevel.hellfire => 28.0,
-    };
+    final theme = ThemeScope.of(context);
+    final auraColor = _heatColor(context, data.heatLevel);
+    final auraGlow = theme.heatGlowRadius(data.heatLevel);
 
     return Container(
       decoration: BoxDecoration(
@@ -1840,7 +1778,7 @@ class _PlayerLeaderboardCard extends StatelessWidget {
               ),
               Chip(
                 avatar: Icon(
-                  _heatIcon(data.heatLevel),
+                  _heatIcon(context, data.heatLevel),
                   size: 16,
                   color: auraColor,
                 ),

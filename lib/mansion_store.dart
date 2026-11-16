@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'models.dart';
+import 'theme_package.dart';
 
 class GangWorkspace {
   GangWorkspace({
@@ -75,6 +76,11 @@ class MansionStore extends ChangeNotifier {
       _activeWorkspace?.feedEntries ?? _emptyFeedEntries;
 
   List<ChoreDefinition> get deck => choreCatalog;
+
+  GameThemePackage get activeTheme => ThemeRegistry.resolve(gang?.themeId);
+
+  GameThemePackage themeForGang(Gang targetGang) =>
+      ThemeRegistry.resolve(targetGang.themeId);
 
   bool get isReady => gang != null && currentMember != null;
 
@@ -201,6 +207,7 @@ class MansionStore extends ChangeNotifier {
     required String founderNickname,
     MemberSex founderSex = MemberSex.male,
     int coinsPerCzk = 10,
+    String themeId = ThemeRegistry.defaultThemeId,
     bool includeStarterFamily = false,
   }) {
     final cleanGang = gangName.trim().isEmpty
@@ -209,6 +216,7 @@ class MansionStore extends ChangeNotifier {
     final cleanNick = founderNickname.trim().isEmpty
         ? 'Dark Lord'
         : founderNickname.trim();
+    final resolvedThemeId = ThemeRegistry.resolve(themeId).id;
     final now = _clock();
     final founder = GangMember(
       id: _nextId('member'),
@@ -223,6 +231,7 @@ class MansionStore extends ChangeNotifier {
       inviteCode: _generateInviteCode(now),
       founderId: founder.id,
       coinsPerCzk: coinsPerCzk.clamp(1, 1000),
+      themeId: resolvedThemeId,
     );
     final ws = GangWorkspace(
       gang: newGang,
@@ -371,6 +380,22 @@ class MansionStore extends ChangeNotifier {
     if (!isCurrentUserHand || gang == null) return;
     gang!.coinsPerCzk = coinsPerCzk.clamp(1, 1000);
     notifyListeners();
+  }
+
+  /// Allows the Gang owner (Hand) to set the active theme package.
+  bool updateGangTheme(String gangId, String themeId) {
+    if (!isOwnerOf(gangId) || !ThemeRegistry.contains(themeId)) {
+      return false;
+    }
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) {
+        if (ws.gang.themeId == themeId) return true;
+        ws.gang.themeId = themeId;
+        notifyListeners();
+        return true;
+      }
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------------------
