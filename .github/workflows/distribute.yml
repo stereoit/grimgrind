@@ -336,3 +336,36 @@ jobs:
           DIST_URL: https://appdistribution.firebase.dev/i/152f586ed88ca49c
           DIST_RELEASE_NOTES: ${{ inputs.release_notes || github.ref_name }}
         run: node tool/update_distribution_doc.mjs
+
+  deploy_hosting:
+    needs: [verify]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Firebase service account secret
+        id: firebase_hosting
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Cache npm for firebase-tools
+        if: steps.firebase_hosting.outputs.enabled == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-firebase-tools-npm
+      - name: Deploy Firebase Hosting
+        if: steps.firebase_hosting.outputs.enabled == 'true'
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          SA_FILE="$RUNNER_TEMP/firebase-sa.json"
+          trap 'rm -f "$SA_FILE"' EXIT
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT_JSON" > "$SA_FILE"
+          GOOGLE_APPLICATION_CREDENTIALS="$SA_FILE" npx --yes firebase-tools deploy --project grim-grind --only hosting
+
