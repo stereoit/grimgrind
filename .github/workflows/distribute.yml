@@ -78,6 +78,25 @@ jobs:
           cache: true
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v6
+      - name: Configure Gradle Maven Central mirror
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/maven-mirror.gradle <<'EOF'
+          settingsEvaluated { settings ->
+              settings.pluginManagement.repositories.all { repo ->
+                  if (repo instanceof MavenArtifactRepository && repo.url.toString().contains("repo.maven.apache.org")) {
+                      repo.setUrl("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
+          }
+          allprojects {
+              repositories.all { repo ->
+                  if (repo instanceof MavenArtifactRepository && repo.url.toString().contains("repo.maven.apache.org")) {
+                      repo.setUrl("https://maven-central.storage-download.googleapis.com/maven2/")
+                  }
+              }
+          }
+          EOF
       - name: Cache Android NDK and CMake
         uses: actions/cache@v5
         with:
