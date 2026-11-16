@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -7,7 +8,17 @@ import 'models.dart';
 import 'theme_package.dart';
 import 'update_checker.dart';
 
-void main() => runApp(const GrimGrindApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
+  } catch (_) {
+    // Gracefully continue in local/demo mode if Firebase is unavailable.
+  }
+  runApp(const GrimGrindApp());
+}
 
 class GrimGrindApp extends StatefulWidget {
   const GrimGrindApp({super.key, this.store, this.updateService});
@@ -21,6 +32,14 @@ class GrimGrindApp extends StatefulWidget {
 
 class _GrimGrindAppState extends State<GrimGrindApp> {
   late final MansionStore store = widget.store ?? MansionStore();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.store == null) {
+      store.syncFromFirebase();
+    }
+  }
 
   @override
   void dispose() {
@@ -89,6 +108,15 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   Widget build(BuildContext context) {
     if (!widget.store.hasSeenIntro) {
       return _buildIntroPages(context);
+    }
+    if (!widget.store.isSignedIn) {
+      return _AuthGateScreen(store: widget.store);
+    }
+    if (widget.store.pendingVerificationEmail != null) {
+      return _EmailVerificationNoticeScreen(store: widget.store);
+    }
+    if (!widget.store.hasAvatar) {
+      return _CreateAvatarScreen(store: widget.store);
     }
     return _GangSetupScreen(store: widget.store);
   }
@@ -234,6 +262,585 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 }
 
+class _AuthGateScreen extends StatefulWidget {
+  const _AuthGateScreen({required this.store});
+
+  final MansionStore store;
+
+  @override
+  State<_AuthGateScreen> createState() => _AuthGateScreenState();
+}
+
+class _AuthGateScreenState extends State<_AuthGateScreen> {
+  static const Color _voidBg = Color(0xFF0B0B0D);
+  static const Color _coalSurface = Color(0xFF17171A);
+  static const Color _gothBorder = Color(0xFF3B3329);
+  static const Color _boneText = Color(0xFFE9E0D0);
+  static const Color _mutedStone = Color(0xFFA79C8C);
+  static const Color _goldAccent = Color(0xFFC6A15B);
+  static const Color _bloodWine = Color(0xFF6E1830);
+  static const Color _bloodBorder = Color(0xFF9B3B48);
+
+  bool _isRegisterMode = false;
+  bool _obscurePassword = true;
+  bool _isSubmitting = false;
+  String? _errorText;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitCredentials() async {
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+    final ok = _isRegisterMode
+        ? await widget.store.registerWithEmailAsync(
+            email: _emailController.text,
+            password: _passwordController.text,
+          )
+        : await widget.store.signInWithEmailAsync(
+            email: _emailController.text,
+            password: _passwordController.text,
+          );
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _isSubmitting = false;
+        _errorText = widget.store.lastSyncError ?? 'Ověření se nezdařilo.';
+      });
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+    final ok = await widget.store.signInWithGoogleAsync();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _isSubmitting = false;
+        _errorText =
+            widget.store.lastSyncError ?? 'Přihlášení přes Google selhalo.';
+      });
+    }
+  }
+
+  Future<void> _continueAsGuest() async {
+    setState(() {
+      _isSubmitting = true;
+      _errorText = null;
+    });
+    final ok = await widget.store.continueAnonymouslyAsync();
+    if (!mounted) return;
+    if (!ok) {
+      setState(() {
+        _isSubmitting = false;
+        _errorText =
+            widget.store.lastSyncError ?? 'Anonymní vstup se nezdařil.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _voidBg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _coalSurface,
+                        border: Border.all(
+                          color: _goldAccent.withValues(alpha: 0.7),
+                          width: 1.4,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.vpn_key_outlined,
+                        color: _goldAccent,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'BRÁNA DO SÍDLA',
+                      style: TextStyle(
+                        color: _goldAccent,
+                        fontSize: 11,
+                        letterSpacing: 2.8,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'GrimGrind',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: _boneText,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Přihlas se do svého rodu nebo založ nový účet.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _mutedStone, fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _coalSurface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _gothBorder, width: 1.2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SegmentedButton<bool>(
+                        segments: const [
+                          ButtonSegment(
+                            value: false,
+                            label: Text('Přihlásit se'),
+                            icon: Icon(Icons.login, size: 16),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text('Registrace'),
+                            icon: Icon(Icons.person_add_alt_1, size: 16),
+                          ),
+                        ],
+                        selected: {_isRegisterMode},
+                        onSelectionChanged: _isSubmitting
+                            ? null
+                            : (s) => setState(() {
+                                _isRegisterMode = s.first;
+                                _errorText = null;
+                              }),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        decoration: const InputDecoration(
+                          filled: true,
+                          fillColor: _voidBg,
+                          labelText: 'E-mail',
+                          prefixIcon: Icon(
+                            Icons.alternate_email,
+                            color: _mutedStone,
+                            size: 18,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: _voidBg,
+                          labelText: 'Heslo',
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                            color: _mutedStone,
+                            size: 18,
+                          ),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: _mutedStone,
+                              size: 18,
+                            ),
+                          ),
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      if (_errorText != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _bloodWine.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _bloodBorder),
+                          ),
+                          child: Text(
+                            _errorText!,
+                            style: const TextStyle(
+                              color: _bloodBorder,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _bloodWine,
+                          foregroundColor: _boneText,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: const BorderSide(color: _bloodBorder),
+                          ),
+                        ),
+                        onPressed: _isSubmitting ? null : _submitCredentials,
+                        icon: const Icon(Icons.key_outlined, size: 18),
+                        label: Text(
+                          _isSubmitting
+                              ? 'Ověřuji pečeť...'
+                              : (_isRegisterMode
+                                    ? 'Vytvořit účet'
+                                    : 'Vstoupit do Sídla'),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: const [
+                          Expanded(child: Divider(color: _gothBorder)),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              'NEBO',
+                              style: TextStyle(
+                                color: _mutedStone,
+                                fontSize: 11,
+                                letterSpacing: 1.6,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: _gothBorder)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: _voidBg,
+                          foregroundColor: _boneText,
+                          side: const BorderSide(color: _goldAccent),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _isSubmitting ? null : _signInWithGoogle,
+                        icon: const Icon(
+                          Icons.g_mobiledata,
+                          color: _goldAccent,
+                          size: 24,
+                        ),
+                        label: const Text('Pokračovat přes Google'),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: _voidBg,
+                          foregroundColor: _boneText,
+                          side: const BorderSide(color: _gothBorder),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _isSubmitting ? null : _continueAsGuest,
+                        icon: const Icon(
+                          Icons.person_outline,
+                          color: _goldAccent,
+                          size: 18,
+                        ),
+                        label: const Text('Pokračovat anonymně jako host'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  '„Kdo překročí práh bez pečetě, stane se pouhým stínem v kronice.“',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: _mutedStone,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmailVerificationNoticeScreen extends StatelessWidget {
+  const _EmailVerificationNoticeScreen({required this.store});
+
+  final MansionStore store;
+
+  static const Color _voidBg = Color(0xFF0B0B0D);
+  static const Color _coalSurface = Color(0xFF17171A);
+  static const Color _boneText = Color(0xFFE9E0D0);
+  static const Color _mutedStone = Color(0xFFA79C8C);
+  static const Color _goldAccent = Color(0xFFC6A15B);
+  static const Color _bloodWine = Color(0xFF6E1830);
+  static const Color _bloodBorder = Color(0xFF9B3B48);
+
+  @override
+  Widget build(BuildContext context) {
+    final email = store.pendingVerificationEmail ?? '';
+    return Scaffold(
+      backgroundColor: _voidBg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: _coalSurface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _goldAccent.withValues(alpha: 0.7)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.mark_email_read_outlined,
+                    color: _goldAccent,
+                    size: 44,
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'PEČEŤ ODESLÁNA',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: _goldAccent,
+                      fontSize: 11,
+                      letterSpacing: 2.6,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Zkontroluj svůj e-mail',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: _boneText,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Na adresu $email jsme odeslali ověřovací odkaz. Potvrď ho ve své schránce, a mezitím můžeš pokračovat do Sídla.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: _mutedStone, fontSize: 13),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _bloodWine,
+                      foregroundColor: _boneText,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: _bloodBorder),
+                      ),
+                    ),
+                    onPressed: store.acknowledgeVerificationEmail,
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    label: const Text('Pokračovat k tvorbě avatara'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateAvatarScreen extends StatefulWidget {
+  const _CreateAvatarScreen({required this.store});
+
+  final MansionStore store;
+
+  @override
+  State<_CreateAvatarScreen> createState() => _CreateAvatarScreenState();
+}
+
+class _CreateAvatarScreenState extends State<_CreateAvatarScreen> {
+  static const Color _voidBg = Color(0xFF0B0B0D);
+  static const Color _coalSurface = Color(0xFF17171A);
+  static const Color _gothBorder = Color(0xFF3B3329);
+  static const Color _boneText = Color(0xFFE9E0D0);
+  static const Color _mutedStone = Color(0xFFA79C8C);
+  static const Color _goldAccent = Color(0xFFC6A15B);
+  static const Color _bloodWine = Color(0xFF6E1830);
+  static const Color _bloodBorder = Color(0xFF9B3B48);
+
+  late final TextEditingController _nicknameController = TextEditingController(
+    text: widget.store.avatarNickname ?? 'Dark Lord',
+  );
+  late MemberSex _selectedSex = widget.store.avatarSex;
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _voidBg,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _coalSurface,
+                        border: Border.all(
+                          color: _goldAccent.withValues(alpha: 0.7),
+                          width: 1.4,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.badge_outlined,
+                        color: _goldAccent,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'STVOŘENÍ AVATARA',
+                      style: TextStyle(
+                        color: _goldAccent,
+                        fontSize: 11,
+                        letterSpacing: 2.8,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tvůj Temný Avatar',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: _boneText,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Zvol si přezdívku a rodovou podobu pro kroniku Sídla.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: _mutedStone, fontSize: 13),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: _coalSurface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _gothBorder, width: 1.2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        controller: _nicknameController,
+                        decoration: const InputDecoration(
+                          filled: true,
+                          fillColor: _voidBg,
+                          labelText: 'Tvoje temná přezdívka',
+                          hintText: 'Např. Shadow Master',
+                          prefixIcon: Icon(
+                            Icons.person_outline,
+                            color: _mutedStone,
+                            size: 18,
+                          ),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      MemberSexSelector(
+                        selected: _selectedSex,
+                        onChanged: (sex) => setState(() => _selectedSex = sex),
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _bloodWine,
+                          foregroundColor: _boneText,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            side: const BorderSide(color: _bloodBorder),
+                          ),
+                        ),
+                        onPressed: () {
+                          widget.store.saveAvatar(
+                            nickname: _nicknameController.text,
+                            sex: _selectedSex,
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_forward, size: 18),
+                        label: const Text('Pokračovat do Sídla'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GangSetupScreen extends StatefulWidget {
   const _GangSetupScreen({required this.store});
 
@@ -246,10 +853,12 @@ class _GangSetupScreen extends StatefulWidget {
 class _GangSetupScreenState extends State<_GangSetupScreen> {
   bool _createMode = true;
   bool _includeStarterFamily = true;
-  MemberSex _selectedSex = MemberSex.male;
+  bool _isSubmitting = false;
+  late MemberSex _selectedSex = widget.store.avatarSex;
   final _gangNameController = TextEditingController(text: 'Sídlo Addamsů');
-  final _nicknameController = TextEditingController(text: 'Dark Lord');
-  final _rateController = TextEditingController(text: '10');
+  late final _nicknameController = TextEditingController(
+    text: widget.store.avatarNickname ?? 'Dark Lord',
+  );
   late final TextEditingController _inviteCodeController =
       TextEditingController(
         text: widget.store.pendingInviteCode ?? 'GRIM-42',
@@ -267,7 +876,6 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
   void dispose() {
     _gangNameController.dispose();
     _nicknameController.dispose();
-    _rateController.dispose();
     _inviteCodeController.dispose();
     super.dispose();
   }
@@ -342,16 +950,6 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                 selected: _selectedSex,
                 onChanged: (sex) => setState(() => _selectedSex = sex),
               ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _rateController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Kurz: kolik Coinů = 1 Kč',
-                  helperText: 'Např. 10 znamená, že 1 000 Coinů = 100 Kč',
-                  border: OutlineInputBorder(),
-                ),
-              ),
               const SizedBox(height: 10),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -364,18 +962,36 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () {
-                  final rate = int.tryParse(_rateController.text) ?? 10;
-                  widget.store.createGang(
-                    gangName: _gangNameController.text,
-                    founderNickname: _nicknameController.text,
-                    founderSex: _selectedSex,
-                    coinsPerCzk: rate,
-                    includeStarterFamily: _includeStarterFamily,
-                  );
-                },
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        setState(() => _isSubmitting = true);
+                        final ok = await widget.store.createGangAsync(
+                          gangName: _gangNameController.text,
+                          founderNickname: _nicknameController.text,
+                          founderSex: _selectedSex,
+                          includeStarterFamily: _includeStarterFamily,
+                        );
+                        if (!mounted) return;
+                        setState(() => _isSubmitting = false);
+                        if (!ok) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                widget.store.lastSyncError ??
+                                    'Nepodařilo se založit Gang.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
                 icon: const Icon(Icons.castle_outlined),
-                label: const Text('Založit Gang a stát se Rukou'),
+                label: Text(
+                  _isSubmitting
+                      ? 'Zakládám Gang...'
+                      : 'Založit Gang a stát se Rukou',
+                ),
               ),
             ] else ...[
               TextField(
@@ -402,20 +1018,33 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
-                onPressed: () {
-                  final ok = widget.store.joinGangByCode(
-                    inviteCode: _inviteCodeController.text,
-                    nickname: _nicknameController.text,
-                    sex: _selectedSex,
-                  );
-                  if (!ok && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Neplatný zvací kód Gangu.')),
-                    );
-                  }
-                },
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        setState(() => _isSubmitting = true);
+                        final ok = await widget.store.joinGangByCodeAsync(
+                          inviteCode: _inviteCodeController.text,
+                          nickname: _nicknameController.text,
+                          sex: _selectedSex,
+                        );
+                        if (!mounted) return;
+                        setState(() => _isSubmitting = false);
+                        if (!ok) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                widget.store.lastSyncError ??
+                                    'Neplatný zvací kód Gangu.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
                 icon: const Icon(Icons.login),
-                label: const Text('Připojit se ke Gangu'),
+                label: Text(
+                  _isSubmitting ? 'Připojuji se...' : 'Připojit se ke Gangu',
+                ),
               ),
             ],
             const SizedBox(height: 12),
@@ -474,6 +1103,17 @@ class _MansionShellState extends State<MansionShell> {
     });
   }
 
+  void _openDeck() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Deck')),
+          body: SafeArea(child: DeckPage(store: widget.store)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
@@ -487,11 +1127,14 @@ class _MansionShellState extends State<MansionShell> {
     final pages = [
       FeedPage(
         store: store,
-        onOpenDeck: () => setState(() => index = 1),
+        onOpenDeck: _openDeck,
       ),
-      DeckPage(store: store),
       BankPage(store: store),
       LeaderboardPage(store: store),
+      ProfileSettingsPage(
+        store: store,
+        updateService: _updateService,
+      ),
     ];
 
     return Scaffold(
@@ -514,17 +1157,6 @@ class _MansionShellState extends State<MansionShell> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Sídlo & Přepínač člena',
-            icon: Icon(
-              member.isHand ? Icons.front_hand : Icons.person_outline,
-              color: const Color(0xFFC6A15B),
-            ),
-            onPressed: () =>
-                _showGangSheet(context, store, updateService: _updateService),
-          ),
-        ],
       ),
       body: SafeArea(
         child: Column(
@@ -546,7 +1178,7 @@ class _MansionShellState extends State<MansionShell> {
           ? FloatingActionButton.extended(
               backgroundColor: const Color(0xFF6E1830),
               foregroundColor: const Color(0xFFF7EEE0),
-              onPressed: () => setState(() => index = 1),
+              onPressed: _openDeck,
               icon: const Icon(Icons.auto_stories),
               label: const Text('Zahrát kartu'),
             )
@@ -558,12 +1190,7 @@ class _MansionShellState extends State<MansionShell> {
           const NavigationDestination(
             icon: Icon(Icons.dynamic_feed_outlined),
             selectedIcon: Icon(Icons.dynamic_feed),
-            label: 'Feed',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: 'Deck',
+            label: 'Chronicle',
           ),
           NavigationDestination(
             icon: Badge(
@@ -576,12 +1203,17 @@ class _MansionShellState extends State<MansionShell> {
               label: Text('$pendingCount'),
               child: const Icon(Icons.savings),
             ),
-            label: 'Bank',
+            label: 'Pouch',
           ),
           const NavigationDestination(
             icon: Icon(Icons.emoji_events_outlined),
             selectedIcon: Icon(Icons.emoji_events),
             label: 'Žebříček',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
           ),
         ],
       ),
@@ -606,36 +1238,23 @@ class FeedPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final entries = store.feedEntries;
-    final member = store.currentMember!;
-    final level = store.monthlyLevelFor(member.id);
-    final heat = store.heatLevelFor(member);
-    final bankCoins = store.bankCoinsFor(member.id);
 
     return CustomScrollView(
       key: const PageStorageKey('feed'),
       slivers: [
-        SliverToBoxAdapter(
-          child: _FeedStatusStrip(
-            member: member,
-            level: level,
-            heat: heat,
-            bankCoins: bankCoins,
-            czkValue: store.czkForCoins(bankCoins),
-            onOpenDeck: onOpenDeck,
-          ),
-        ),
         if (entries.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: _EmptyState(
               icon: Icons.dynamic_feed_outlined,
+              imageAsset: 'assets/branding/chronicle_empty.png',
               title: 'Kronika sídla mlčí',
-              text: 'Otevři Deck a zahraj první kartu úkolu.',
+              text: 'Zatím žádná zahraná karta. Pavučiny čekají na první zápis.',
             ),
           )
         else
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
             sliver: SliverList.separated(
               itemCount: entries.length,
               separatorBuilder: (_, _) => const SizedBox(height: 16),
@@ -658,71 +1277,46 @@ class FeedPage extends StatelessWidget {
   }
 }
 
-class _FeedStatusStrip extends StatelessWidget {
-  const _FeedStatusStrip({
-    required this.member,
-    required this.level,
-    required this.heat,
-    required this.bankCoins,
-    required this.czkValue,
-    required this.onOpenDeck,
+class _CoinAmount extends StatelessWidget {
+  const _CoinAmount({
+    required this.amount,
+    this.prefix = '',
+    this.fontSize = 14,
+    this.iconSize = 16,
+    this.color = const Color(0xFFC6A15B),
+    this.fontWeight = FontWeight.bold,
   });
 
-  final GangMember member;
-  final MonthlyLevel level;
-  final HeatLevel heat;
-  final int bankCoins;
-  final int czkValue;
-  final VoidCallback onOpenDeck;
+  final int amount;
+  final String prefix;
+  final double fontSize;
+  final double iconSize;
+  final Color color;
+  final FontWeight fontWeight;
 
   @override
-  Widget build(BuildContext context) {
-    final totalBonus = level.bonusPercent + heat.bonusPercent;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF17171A),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _heatColor(context, heat).withValues(alpha: 0.7),
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        '$prefix$amount',
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
         ),
       ),
-      child: Row(
-        children: [
-          Icon(_heatIcon(context, heat), color: _heatColor(context, heat), size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${level.label} (${level.utCallout}) • +$totalBonus %',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFC6A15B),
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'V Banku: $bankCoins Coinů (~$czkValue Kč)',
-                  style: const TextStyle(
-                    color: Color(0xFF968C80),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          OutlinedButton(
-            onPressed: onOpenDeck,
-            child: const Text('Deck'),
-          ),
-        ],
+      const SizedBox(width: 4),
+      ClipOval(
+        child: Image.asset(
+          'assets/branding/gold_coin.png',
+          width: iconSize,
+          height: iconSize,
+          fit: BoxFit.cover,
+        ),
       ),
-    );
-  }
+    ],
+  );
 }
 
 class _FeedPlayedCardPost extends StatelessWidget {
@@ -784,13 +1378,11 @@ class _FeedPlayedCardPost extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: const Color(0xFFC6A15B)),
                   ),
-                  child: Text(
-                    '+${entry.coins ?? 0} Coinů',
-                    style: const TextStyle(
-                      color: Color(0xFFC6A15B),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                  child: _CoinAmount(
+                    amount: entry.coins ?? 0,
+                    prefix: '+',
+                    fontSize: 12,
+                    iconSize: 15,
                   ),
                 ),
               ],
@@ -886,12 +1478,11 @@ class _FeedExchangePost extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '${entry.coins ?? 0} Coinů → ${entry.czkAmount ?? 0} Kč',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      _CoinAmount(
+                        amount: entry.coins ?? 0,
+                        fontSize: 24,
+                        iconSize: 24,
+                        color: const Color(0xFFE9E0D0),
                       ),
                     ],
                   ),
@@ -1196,19 +1787,10 @@ class _DeckCardTile extends StatelessWidget {
                 const Divider(height: 16),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.toll,
-                      size: 16,
-                      color: Color(0xFFC6A15B),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '$effectiveCoins C',
-                      style: const TextStyle(
-                        color: Color(0xFFC6A15B),
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    _CoinAmount(
+                      amount: effectiveCoins,
+                      fontSize: 17,
+                      iconSize: 18,
                     ),
                     if (boosted) ...[
                       const SizedBox(width: 6),
@@ -1289,16 +1871,14 @@ Future<void> _confirmPlayCard(
                 Expanded(
                   child: _StatTile(
                     icon: Icons.toll,
-                    value: '$effectiveCoins Coinů',
-                    label: 'ZISK DO BANKU',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _StatTile(
-                    icon: Icons.payments_outlined,
-                    value: '~${store.czkForCoins(effectiveCoins)} Kč',
-                    label: 'ORIENTAČNĚ',
+                    value: '$effectiveCoins',
+                    valueWidget: _CoinAmount(
+                      amount: effectiveCoins,
+                      fontSize: 16,
+                      iconSize: 16,
+                      color: const Color(0xFFE9E0D0),
+                    ),
+                    label: 'ZISK DO MEŠCE',
                   ),
                 ),
               ],
@@ -1309,7 +1889,19 @@ Future<void> _confirmPlayCard(
               child: FilledButton.icon(
                 onPressed: () => Navigator.pop(context, true),
                 icon: const Icon(Icons.bolt),
-                label: Text('Zahrát kartu (+$effectiveCoins Coinů)'),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Zahrát kartu (+'),
+                    _CoinAmount(
+                      amount: effectiveCoins,
+                      fontSize: 14,
+                      iconSize: 15,
+                      color: const Color(0xFFE9E0D0),
+                    ),
+                    const Text(')'),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1324,10 +1916,13 @@ Future<void> _confirmPlayCard(
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Zahráno! +${played.coinsAwarded} Coinů připsáno do tvého Banku.',
+            'Zahráno! +${played.coinsAwarded} připsáno do tvého Mešce.',
           ),
         ),
       );
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     }
   }
 }
@@ -1347,15 +1942,13 @@ class BankPage extends StatelessWidget {
     final bankCards = store.bankCardsFor(member.id);
     final pendingMine = store.pendingCardsFor(member.id);
     final bankCoins = store.bankCoinsFor(member.id);
-    final czk = store.czkForCoins(bankCoins);
-    final gang = store.gang!;
 
     return ListView(
       key: const PageStorageKey('bank'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         const Text(
-          'TVŮJ POKLAD',
+          'TVŮJ MEŠEC',
           style: TextStyle(
             color: Color(0xFFC6A15B),
             letterSpacing: 2,
@@ -1363,7 +1956,7 @@ class BankPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        const Text('Bank & Směna u Ruky', style: TextStyle(fontSize: 26)),
+        const Text('Mešec & Směna u Ruky', style: TextStyle(fontSize: 26)),
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(20),
@@ -1374,17 +1967,10 @@ class BankPage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Text(
-                '$bankCoins Coinů',
-                style: const TextStyle(
-                  fontSize: 38,
-                  color: Color(0xFFC6A15B),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '≈ $czk Kč (kurz ${gang.coinsPerCzk} Coinů = 1 Kč)',
-                style: const TextStyle(color: Color(0xFF968C80)),
+              _CoinAmount(
+                amount: bankCoins,
+                fontSize: 38,
+                iconSize: 34,
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -1398,7 +1984,7 @@ class BankPage extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Žádost o směnu ${req.totalCoins} Coinů (${req.czkAmount} Kč) odeslána Ruce.',
+                                  'Žádost o směnu ${req.totalCoins} zlaťáků odeslána Ruce.',
                                 ),
                               ),
                             );
@@ -1407,7 +1993,7 @@ class BankPage extends StatelessWidget {
                   icon: const Icon(Icons.front_hand_outlined),
                   label: Text(
                     bankCards.isEmpty
-                        ? 'Bank je prázdný'
+                        ? 'Mešec je prázdný'
                         : 'Požádat Ruku o směnu (${bankCards.length})',
                   ),
                 ),
@@ -1416,7 +2002,7 @@ class BankPage extends StatelessWidget {
           ),
         ),
         if (bankCards.isNotEmpty) ...[
-          const _SectionTitle('ZAHRANÉ KARTY V BANKU'),
+          const _SectionTitle('ZAHRANÉ KARTY V MEŠCI'),
           ...bankCards.map(
             (card) => Card(
               child: ListTile(
@@ -1433,12 +2019,11 @@ class BankPage extends StatelessWidget {
                 subtitle: Text(
                   DateFormat('d. M. • HH:mm').format(card.playedAt),
                 ),
-                trailing: Text(
-                  '+${card.coinsAwarded} C',
-                  style: const TextStyle(
-                    color: Color(0xFFC6A15B),
-                    fontWeight: FontWeight.bold,
-                  ),
+                trailing: _CoinAmount(
+                  amount: card.coinsAwarded,
+                  prefix: '+',
+                  fontSize: 14,
+                  iconSize: 16,
                 ),
               ),
             ),
@@ -1454,7 +2039,11 @@ class BankPage extends StatelessWidget {
                   color: Color(0xFFC6A15B),
                 ),
                 title: Text(card.chore.title),
-                trailing: Text('${card.coinsAwarded} C'),
+                trailing: _CoinAmount(
+                  amount: card.coinsAwarded,
+                  fontSize: 13,
+                  iconSize: 15,
+                ),
               ),
             ),
           ),
@@ -1465,53 +2054,24 @@ class BankPage extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Aktuální směnný kurz',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    final created = store.closeMonth();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Měsíc uzavřen! Vygenerováno $created automatických žádostí o směnu.',
+                          ),
                         ),
-                      ),
-                      Text('${gang.coinsPerCzk} Coinů = 1 Kč'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final rate in [5, 10, 20, 50])
-                        ChoiceChip(
-                          label: Text('$rate C / 1 Kč'),
-                          selected: gang.coinsPerCzk == rate,
-                          onSelected: (_) => store.updateCoinsPerCzk(rate),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final created = store.closeMonth();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Měsíc uzavřen! Vygenerováno $created automatických žádostí o směnu.',
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.event_available),
-                      label: const Text('Uzavřít měsíc (Auto-směna & Výherce)'),
-                    ),
-                  ),
-                ],
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.event_available),
+                  label: const Text('Uzavřít měsíc (Auto-směna & Výherce)'),
+                ),
               ),
             ),
           ),
@@ -1565,12 +2125,10 @@ class _PendingExchangeCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '${req.totalCoins} C → ${req.czkAmount} Kč',
-                  style: const TextStyle(
-                    color: Color(0xFFC6A15B),
-                    fontWeight: FontWeight.bold,
-                  ),
+                _CoinAmount(
+                  amount: req.totalCoins,
+                  fontSize: 16,
+                  iconSize: 17,
                 ),
               ],
             ),
@@ -1588,7 +2146,13 @@ class _PendingExchangeCard extends StatelessWidget {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 title: Text(c.chore.title),
-                subtitle: Text('${c.coinsAwarded} Coinů'),
+                subtitle: _CoinAmount(
+                  amount: c.coinsAwarded,
+                  fontSize: 12,
+                  iconSize: 13,
+                  color: const Color(0xFF968C80),
+                  fontWeight: FontWeight.normal,
+                ),
                 trailing: IconButton(
                   tooltip: 'Neuznat kartu',
                   icon: const Icon(Icons.close, size: 18),
@@ -1602,7 +2166,7 @@ class _PendingExchangeCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: () => store.approveExchange(req.id),
                 icon: const Icon(Icons.verified_outlined),
-                label: Text('Schválit směnu (${req.czkAmount} Kč)'),
+                label: Text('Schválit směnu (${req.totalCoins})'),
               ),
             ),
           ],
@@ -1820,9 +2384,24 @@ class _PlayerLeaderboardCard extends StatelessWidget {
           ),
           if (data.inBankCount > 0) ...[
             const SizedBox(height: 10),
-            Text(
-              'V Banku čeká na směnu: ${data.inBankCount} karet (${data.inBankCoins} Coinů)',
-              style: const TextStyle(color: Color(0xFF968C80), fontSize: 11),
+            Row(
+              children: [
+                Text(
+                  'V Mešci čeká: ${data.inBankCount} karet (',
+                  style: const TextStyle(color: Color(0xFF968C80), fontSize: 11),
+                ),
+                _CoinAmount(
+                  amount: data.inBankCoins,
+                  fontSize: 11,
+                  iconSize: 12,
+                  color: const Color(0xFF968C80),
+                  fontWeight: FontWeight.normal,
+                ),
+                const Text(
+                  ')',
+                  style: TextStyle(color: Color(0xFF968C80), fontSize: 11),
+                ),
+              ],
             ),
           ],
         ],
@@ -1863,208 +2442,175 @@ class _MiniStat extends StatelessWidget {
 // Gang & Profile Sheet (Switch active member, invite code, rename)
 // =============================================================================
 
-Future<void> _showGangSheet(
-  BuildContext context,
-  MansionStore store, {
-  DistributionUpdateService? updateService,
-}) async {
-  final renameController = TextEditingController(
-    text: store.currentMember?.nickname ?? '',
-  );
-  final addController = TextEditingController();
+class ProfileSettingsPage extends StatefulWidget {
+  const ProfileSettingsPage({
+    super.key,
+    required this.store,
+    this.updateService,
+  });
 
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: const Color(0xFF111114),
-    builder: (context) => SafeArea(
-      child: AnimatedBuilder(
-        animation: store,
-        builder: (context, _) {
-          final gang = store.gang!;
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              20,
-              20,
-              20 + MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    gang.name,
-                    style: const TextStyle(fontSize: 22),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Zvací kód pro členy Gangu: ${gang.inviteCode}',
-                    style: const TextStyle(color: Color(0xFFC6A15B)),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => MyGangsPage(store: store),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.groups_outlined),
-                          label: const Text('Moje Gangy'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => ManageGangPage(
-                                  store: store,
-                                  gangId: gang.id,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.share_outlined),
-                          label: const Text('Pozvat / Správa'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'PŘEPNOUT ČLENA (TEST / DOMÁCNOST)',
-                    style: TextStyle(
-                      fontSize: 10,
-                      letterSpacing: 1.6,
-                      color: Color(0xFF968C80),
+  final MansionStore store;
+  final DistributionUpdateService? updateService;
+
+  @override
+  State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
+}
+
+class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
+  late final TextEditingController _renameController = TextEditingController(
+    text: widget.store.currentMember?.nickname ?? '',
+  );
+
+  @override
+  void dispose() {
+    _renameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final gang = store.gang!;
+    final updateService = widget.updateService;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        Text(gang.name, style: const TextStyle(fontSize: 22)),
+        const SizedBox(height: 4),
+        Text(
+          'Zvací kód pro členy Gangu: ${gang.inviteCode}',
+          style: const TextStyle(color: Color(0xFFC6A15B)),
+        ),
+        if (store.authUserEmail != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Účet: ${store.authUserEmail}',
+            style: const TextStyle(color: Color(0xFF968C80), fontSize: 12),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MyGangsPage(store: store),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...store.members.map(
-                    (m) {
-                      final selected = m.id == store.currentMemberId;
-                      return ListTile(
-                        leading: Icon(
-                          selected
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_off,
-                          color: selected
-                              ? const Color(0xFFC6A15B)
-                              : const Color(0xFF968C80),
-                        ),
-                        title: Text(m.nickname),
-                        subtitle: Text(
-                          m.isHand ? 'Zakladatel • Ruka' : 'Člen Gangu',
-                        ),
-                        onTap: () {
-                          store.switchActiveMember(m.id);
-                          renameController.text =
-                              store.currentMember?.nickname ?? '';
-                        },
-                      );
-                    },
-                  ),
-                  const Divider(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: renameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Změnit moji přezdívku',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () =>
-                            store.renameCurrentMember(renameController.text),
-                        child: const Text('Uložit'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: addController,
-                          decoration: const InputDecoration(
-                            labelText: 'Pozvat / přidat nového člena',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton(
-                        onPressed: () {
-                          store.addMember(addController.text);
-                          addController.clear();
-                        },
-                        child: const Text('Přidat'),
-                      ),
-                    ],
-                  ),
-                  if (updateService != null) ...[
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
-                        Icons.system_update_alt,
-                        color: Color(0xFFC6A15B),
-                      ),
-                      title: const Text('Aktualizace aplikace'),
-                      subtitle: FutureBuilder<({String version, int buildNumber})>(
-                        future: updateService.currentAppVersion(),
-                        builder: (context, snapshot) {
-                          final v = snapshot.data;
-                          return Text(
-                            v == null
-                                ? 'Zkontrolovat novou verzi'
-                                : 'Aktuální verze ${v.version} (#${v.buildNumber})',
-                          );
-                        },
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final nav = Navigator.of(context);
-                        final result = await updateService.checkForUpdate();
-                        if (result != null && result.isUpdateAvailable) {
-                          nav.pop();
-                          await updateService.openUpdateUrl(result.info);
-                        } else {
-                          nav.pop();
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Máš nejnovější dostupnou verzi.'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ],
+                  );
+                },
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Moje Gangy'),
               ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          ManageGangPage(store: store, gangId: gang.id),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Pozvat / Správa'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'PŘEPNOUT ČLENA (TEST / DOMÁCNOST)',
+          style: TextStyle(
+            fontSize: 10,
+            letterSpacing: 1.6,
+            color: Color(0xFF968C80),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...store.members.map((m) {
+          final selected = m.id == store.currentMemberId;
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_off,
+              color: selected
+                  ? const Color(0xFFC6A15B)
+                  : const Color(0xFF968C80),
+            ),
+            title: Text(m.nickname),
+            subtitle: Text(m.isHand ? 'Zakladatel • Ruka' : 'Člen Gangu'),
+            onTap: () {
+              store.switchActiveMember(m.id);
+              _renameController.text = store.currentMember?.nickname ?? '';
+            },
           );
-        },
-      ),
-    ),
-  );
-
-  renameController.dispose();
-  addController.dispose();
+        }),
+        const Divider(),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _renameController,
+                decoration: const InputDecoration(
+                  labelText: 'Změnit moji přezdívku',
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () =>
+                  store.renameCurrentMember(_renameController.text),
+              child: const Text('Uložit'),
+            ),
+          ],
+        ),
+        if (updateService != null) ...[
+          const SizedBox(height: 16),
+          const Divider(),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(
+              Icons.system_update_alt,
+              color: Color(0xFFC6A15B),
+            ),
+            title: const Text('Aktualizace aplikace'),
+            subtitle: FutureBuilder<({String version, int buildNumber})>(
+              future: updateService.currentAppVersion(),
+              builder: (context, snapshot) {
+                final v = snapshot.data;
+                return Text(
+                  v == null
+                      ? 'Zkontrolovat novou verzi'
+                      : 'Aktuální verze ${v.version} (#${v.buildNumber})',
+                );
+              },
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final result = await updateService.checkForUpdate();
+              if (result != null && result.isUpdateAvailable) {
+                await updateService.openUpdateUrl(result.info);
+              } else {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Máš nejnovější dostupnou verzi.'),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 // =============================================================================
@@ -2076,11 +2622,13 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
+    this.valueWidget,
   });
 
   final IconData icon;
   final String value;
   final String label;
+  final Widget? valueWidget;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -2093,11 +2641,12 @@ class _StatTile extends StatelessWidget {
       children: [
         Icon(icon, size: 19, color: const Color(0xFFC6A15B)),
         const SizedBox(height: 6),
-        Text(
-          value,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13),
-        ),
+        valueWidget ??
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13),
+            ),
         const SizedBox(height: 3),
         Text(
           label,
@@ -2136,20 +2685,32 @@ class _EmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.text,
+    this.imageAsset,
   });
 
   final IconData icon;
   final String title;
   final String text;
+  final String? imageAsset;
 
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 52, color: const Color(0xFF5A4931)),
+          if (imageAsset != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(
+                imageAsset!,
+                height: 220,
+                fit: BoxFit.contain,
+              ),
+            )
+          else
+            Icon(icon, size: 52, color: const Color(0xFF5A4931)),
           const SizedBox(height: 18),
           Text(title, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 8),

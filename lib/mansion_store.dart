@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import 'firebase_gang_repository.dart';
 import 'models.dart';
 import 'theme_package.dart';
 
@@ -25,18 +28,34 @@ class GangWorkspace {
 }
 
 class MansionStore extends ChangeNotifier {
-  MansionStore({DateTime Function()? clock, bool seedDemo = false})
-    : _clock = clock ?? DateTime.now {
+  MansionStore({
+    DateTime Function()? clock,
+    bool seedDemo = false,
+    FirebaseGangRepository? gangRepository,
+  }) : _clock = clock ?? DateTime.now,
+       _gangRepo = gangRepository ?? FirebaseGangRepository() {
     if (seedDemo) {
       _seedSampleMansion();
     }
   }
 
   final DateTime Function() _clock;
+  final FirebaseGangRepository _gangRepo;
   int _idSeq = 100;
 
   bool hasSeenIntro = false;
+  bool isSignedIn = false;
+  bool isAnonymousAuth = false;
+  String? authUserEmail;
+  String? pendingVerificationEmail;
+  String? avatarNickname;
+  MemberSex avatarSex = MemberSex.male;
   String? pendingInviteCode;
+  String? lastSyncError;
+
+  bool get hasAvatar =>
+      avatarNickname != null && avatarNickname!.trim().isNotEmpty;
+  bool get isFirebaseReady => _gangRepo.isFirebaseReady;
 
   final List<GangWorkspace> _workspaces = [];
   String? _activeGangId;
@@ -241,6 +260,11 @@ class MansionStore extends ChangeNotifier {
     _workspaces.add(ws);
     _activeGangId = newGang.id;
     hasSeenIntro = true;
+    isSignedIn = true;
+    avatarNickname ??= cleanNick;
+    if (avatarNickname != null && avatarNickname!.isEmpty) {
+      avatarNickname = cleanNick;
+    }
 
     if (includeStarterFamily) {
       _populateGangWithSampleHistory(founder);
@@ -295,6 +319,8 @@ class MansionStore extends ChangeNotifier {
       target.currentMemberId = newcomer.id;
     }
     hasSeenIntro = true;
+    isSignedIn = true;
+    avatarNickname ??= cleanNick;
     pendingInviteCode = null;
     notifyListeners();
     return true;
@@ -309,7 +335,20 @@ class MansionStore extends ChangeNotifier {
           _idSeq++;
           nextCode = _generateInviteCode(_clock());
         }
+        final oldCode = ws.gang.inviteCode;
         ws.gang.inviteCode = nextCode;
+        if (isFirebaseReady) {
+          unawaited(
+            _gangRepo
+                .regenerateInviteCode(
+                  gangId: gangId,
+                  gangName: ws.gang.name,
+                  oldCode: oldCode,
+                  newCode: nextCode,
+                )
+                .catchError((_) {}),
+          );
+        }
         notifyListeners();
         return nextCode;
       }
@@ -329,13 +368,405 @@ class MansionStore extends ChangeNotifier {
     if (_activeGangId == gangId) {
       _activeGangId = _workspaces.isEmpty ? null : _workspaces.first.gang.id;
     }
+    if (isFirebaseReady) {
+      unawaited(_gangRepo.deleteGang(gangId: gangId).catchError((_) {}));
+    }
     notifyListeners();
     return true;
   }
 
   void startSampleMansion() {
     _seedSampleMansion();
+    isSignedIn = true;
+    avatarNickname ??= currentMember?.nickname ?? 'Dark Lord';
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> lookupRemoteInvite(String inviteCode) async {
+    if (!isFirebaseReady) return null;
+    try {
+      return await _gangRepo.lookupInvite(inviteCode);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> signInWithEmailAsync({
+    required String email,
+    required String password,
+  }) async {
+    lastSyncError = null;
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty || password.isEmpty) {
+      lastSyncError = 'Zadej e-mail a heslo.';
+      return false;
+    }
+    if (!isFirebaseReady) {
+      isSignedIn = true;
+      isAnonymousAuth = false;
+      authUserEmail = cleanEmail;
+      notifyListeners();
+      return true;
+    }
+    try {
+      final cred = await _gangRepo.signInWithEmail(
+        email: cleanEmail,
+        password: password,
+      );
+      isSignedIn = true;
+      isAnonymousAuth = cred?.user?.isAnonymous ?? false;
+      authUserEmail = cred?.user?.email ?? cleanEmail;
+      await syncFromFirebase();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Přihlášení selhalo: $e';
+      return false;
+    }
+  }
+
+  Future<bool> registerWithEmailAsync({
+    required String email,
+    required String password,
+  }) async {
+    lastSyncError = null;
+    final cleanEmail = email.trim();
+    if (cleanEmail.isEmpty || password.length < 6) {
+      lastSyncError = 'Zadej platný e-mail a heslo (min. 6 znaků).';
+      return false;
+    }
+    if (!isFirebaseReady) {
+      isSignedIn = true;
+      isAnonymousAuth = false;
+      authUserEmail = cleanEmail;
+      pendingVerificationEmail = cleanEmail;
+      notifyListeners();
+      return true;
+    }
+    try {
+      final cred = await _gangRepo.registerWithEmail(
+        email: cleanEmail,
+        password: password,
+      );
+      isSignedIn = true;
+      isAnonymousAuth = cred?.user?.isAnonymous ?? false;
+      authUserEmail = cred?.user?.email ?? cleanEmail;
+      pendingVerificationEmail = authUserEmail;
+      await syncFromFirebase();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Registrace selhala: $e';
+      return false;
+    }
+  }
+
+  void acknowledgeVerificationEmail() {
+    if (pendingVerificationEmail == null) return;
+    pendingVerificationEmail = null;
+    notifyListeners();
+  }
+
+  Future<bool> signInWithGoogleAsync() async {
+    lastSyncError = null;
+    if (!isFirebaseReady) {
+      isSignedIn = true;
+      isAnonymousAuth = false;
+      authUserEmail = 'google@demo.local';
+      notifyListeners();
+      return true;
+    }
+    try {
+      final cred = await _gangRepo.signInWithGoogle();
+      isSignedIn = true;
+      isAnonymousAuth = cred?.user?.isAnonymous ?? false;
+      authUserEmail = cred?.user?.email;
+      await syncFromFirebase();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Přihlášení přes Google selhalo: $e';
+      return false;
+    }
+  }
+
+  Future<bool> continueAnonymouslyAsync() async {
+    lastSyncError = null;
+    if (!isFirebaseReady) {
+      isSignedIn = true;
+      isAnonymousAuth = true;
+      authUserEmail = null;
+      notifyListeners();
+      return true;
+    }
+    try {
+      final user = await _gangRepo.ensureSignedIn();
+      if (user == null) {
+        lastSyncError = 'Anonymní přihlášení se nezdařilo.';
+        return false;
+      }
+      isSignedIn = true;
+      isAnonymousAuth = user.isAnonymous;
+      authUserEmail = user.email;
+      await syncFromFirebase();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Anonymní přihlášení selhalo: $e';
+      return false;
+    }
+  }
+
+  void saveAvatar({required String nickname, required MemberSex sex}) {
+    avatarNickname = nickname.trim().isEmpty ? 'Dark Lord' : nickname.trim();
+    avatarSex = sex;
+    notifyListeners();
+  }
+
+  Future<void> syncFromFirebase() async {
+    if (!isFirebaseReady) return;
+    try {
+      final user = _gangRepo.currentUser;
+      if (user == null) return;
+      isSignedIn = true;
+      isAnonymousAuth = user.isAnonymous;
+      authUserEmail = user.email;
+      final gangIds = await _gangRepo.fetchUserGangIds();
+      for (final gangId in gangIds) {
+        final gangData = await _gangRepo.fetchGang(gangId);
+        if (gangData == null) continue;
+        final membersData = await _gangRepo.fetchGangMembers(gangId);
+        _upsertRemoteWorkspace(
+          gangId: gangId,
+          gangData: gangData,
+          membersData: membersData,
+          currentUid: user.uid,
+        );
+      }
+      if (_activeGangId == null && _workspaces.isNotEmpty) {
+        _activeGangId = _workspaces.first.gang.id;
+      }
+      if (_workspaces.isNotEmpty) {
+        hasSeenIntro = true;
+        if (!hasAvatar && currentMember != null) {
+          avatarNickname = currentMember!.nickname;
+          avatarSex = currentMember!.sex;
+        }
+      }
+      notifyListeners();
+    } catch (_) {
+      // Gracefully ignore startup sync errors when offline.
+    }
+  }
+
+  Future<bool> createGangAsync({
+    required String gangName,
+    required String founderNickname,
+    MemberSex founderSex = MemberSex.male,
+    int coinsPerCzk = 10,
+    String themeId = ThemeRegistry.defaultThemeId,
+    bool includeStarterFamily = false,
+  }) async {
+    lastSyncError = null;
+    final cleanGang = gangName.trim().isEmpty
+        ? 'Sídlo stínů'
+        : gangName.trim();
+    final cleanNick = founderNickname.trim().isEmpty
+        ? 'Dark Lord'
+        : founderNickname.trim();
+    final resolvedThemeId = ThemeRegistry.resolve(themeId).id;
+    final clampedRate = coinsPerCzk.clamp(1, 1000);
+
+    if (!isFirebaseReady) {
+      createGang(
+        gangName: cleanGang,
+        founderNickname: cleanNick,
+        founderSex: founderSex,
+        coinsPerCzk: clampedRate,
+        themeId: resolvedThemeId,
+        includeStarterFamily: includeStarterFamily,
+      );
+      return true;
+    }
+
+    try {
+      final user = await _gangRepo.ensureSignedIn();
+      if (user == null) {
+        lastSyncError = 'Nepodařilo se přihlásit k Firebase.';
+        return false;
+      }
+      final inviteCode = _generateInviteCode(_clock());
+      final gangId = await _gangRepo.createGang(
+        gangName: cleanGang,
+        founderNickname: cleanNick,
+        founderSex: founderSex,
+        inviteCode: inviteCode,
+        coinsPerCzk: clampedRate,
+        themeId: resolvedThemeId,
+      );
+      if (gangId == null) {
+        lastSyncError = 'Nepodařilo se založit Gang na serveru.';
+        return false;
+      }
+
+      final founder = GangMember(
+        id: user.uid,
+        nickname: cleanNick,
+        isHand: true,
+        sex: founderSex,
+      );
+      final newGang = Gang(
+        id: gangId,
+        name: cleanGang,
+        inviteCode: inviteCode,
+        founderId: user.uid,
+        coinsPerCzk: clampedRate,
+        themeId: resolvedThemeId,
+      );
+      final ws = GangWorkspace(
+        gang: newGang,
+        currentMemberId: founder.id,
+        members: [founder],
+      );
+      _workspaces.add(ws);
+      _activeGangId = newGang.id;
+      hasSeenIntro = true;
+
+      if (includeStarterFamily) {
+        _populateGangWithSampleHistory(founder);
+      }
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Chyba při zakládání Gangu: $e';
+      return false;
+    }
+  }
+
+  Future<bool> joinGangByCodeAsync({
+    required String inviteCode,
+    required String nickname,
+    MemberSex sex = MemberSex.male,
+  }) async {
+    lastSyncError = null;
+    final cleanCode = inviteCode.trim().toUpperCase();
+    final cleanNick = nickname.trim().isEmpty ? 'Shadow' : nickname.trim();
+    if (cleanCode.isEmpty) {
+      lastSyncError = 'Zadej zvací kód Gangu.';
+      return false;
+    }
+
+    // 1. Check local workspaces first.
+    for (final ws in _workspaces) {
+      if (ws.gang.inviteCode.toUpperCase() == cleanCode) {
+        return joinGangByCode(
+          inviteCode: cleanCode,
+          nickname: cleanNick,
+          sex: sex,
+        );
+      }
+    }
+
+    // 2. If Firebase is not configured (e.g. unit tests), use local fallback.
+    if (!isFirebaseReady) {
+      return joinGangByCode(
+        inviteCode: cleanCode,
+        nickname: cleanNick,
+        sex: sex,
+      );
+    }
+
+    // 3. Look up and join via Firestore.
+    try {
+      final user = await _gangRepo.ensureSignedIn();
+      if (user == null) {
+        lastSyncError = 'Nepodařilo se přihlásit k Firebase.';
+        return false;
+      }
+
+      final gangId = await _gangRepo.acceptInvite(
+        inviteCode: cleanCode,
+        nickname: cleanNick,
+        sex: sex,
+      );
+      if (gangId == null) {
+        lastSyncError = 'Pozvánka s kódem $cleanCode nebyla nalezena.';
+        return false;
+      }
+
+      final gangData = await _gangRepo.fetchGang(gangId);
+      if (gangData == null) {
+        lastSyncError = 'Gang pro kód $cleanCode se nepodařilo načíst.';
+        return false;
+      }
+      final membersData = await _gangRepo.fetchGangMembers(gangId);
+      _upsertRemoteWorkspace(
+        gangId: gangId,
+        gangData: gangData,
+        membersData: membersData,
+        currentUid: user.uid,
+      );
+      _activeGangId = gangId;
+      hasSeenIntro = true;
+      pendingInviteCode = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      lastSyncError = 'Chyba při připojování ke Gangu: $e';
+      return false;
+    }
+  }
+
+  void _upsertRemoteWorkspace({
+    required String gangId,
+    required Map<String, dynamic> gangData,
+    required List<Map<String, dynamic>> membersData,
+    required String currentUid,
+  }) {
+    final gang = Gang(
+      id: gangId,
+      name: (gangData['name'] as String?) ?? 'Sídlo',
+      inviteCode: (gangData['inviteCode'] as String?) ?? '',
+      founderId: (gangData['founderId'] as String?) ?? '',
+      coinsPerCzk: (gangData['coinsPerCzk'] as num?)?.toInt() ?? 10,
+      themeId: ThemeRegistry.resolve(gangData['themeId'] as String?).id,
+    );
+
+    final members = membersData.map((m) {
+      final sexName = m['sex'] as String?;
+      final sex = MemberSex.values.firstWhere(
+        (s) => s.name == sexName,
+        orElse: () => MemberSex.male,
+      );
+      return GangMember(
+        id: (m['id'] as String?) ?? '',
+        nickname: (m['nickname'] as String?) ?? 'Shadow',
+        isHand: (m['isHand'] as bool?) ?? false,
+        sex: sex,
+        heatPeakDays: (m['heatPeakDays'] as num?)?.toInt() ?? 0,
+      );
+    }).toList();
+
+    final existingIdx = _workspaces.indexWhere((w) => w.gang.id == gangId);
+    if (existingIdx >= 0) {
+      final existing = _workspaces[existingIdx];
+      existing.gang.name = gang.name;
+      existing.gang.inviteCode = gang.inviteCode;
+      existing.gang.coinsPerCzk = gang.coinsPerCzk;
+      existing.gang.themeId = gang.themeId;
+      existing.members
+        ..clear()
+        ..addAll(members);
+      existing.currentMemberId = currentUid;
+    } else {
+      _workspaces.add(
+        GangWorkspace(
+          gang: gang,
+          currentMemberId: currentUid,
+          members: members,
+        ),
+      );
+    }
   }
 
   void addMember(
@@ -391,6 +822,13 @@ class MansionStore extends ChangeNotifier {
       if (ws.gang.id == gangId) {
         if (ws.gang.themeId == themeId) return true;
         ws.gang.themeId = themeId;
+        if (isFirebaseReady) {
+          unawaited(
+            _gangRepo
+                .updateGangTheme(gangId: gangId, themeId: themeId)
+                .catchError((_) {}),
+          );
+        }
         notifyListeners();
         return true;
       }

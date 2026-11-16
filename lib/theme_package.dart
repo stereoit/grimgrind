@@ -210,6 +210,29 @@ class GameThemePackage {
       backgroundColor: secondaryAccent,
       contentTextStyle: TextStyle(color: onAccentText),
     ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return secondaryAccent;
+          }
+          return voidBackground;
+        }),
+        foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return onAccentText;
+          }
+          return mutedText;
+        }),
+        iconColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return onAccentText;
+          }
+          return mutedText;
+        }),
+        side: WidgetStatePropertyAll(BorderSide(color: border)),
+      ),
+    ),
   );
 
   Color difficultyColor(ChoreDifficulty difficulty) =>

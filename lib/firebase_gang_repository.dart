@@ -29,6 +29,14 @@ class FirebaseGangRepository {
       ? _firebaseAuth.authStateChanges()
       : const Stream<User?>.empty();
 
+  Future<User?> ensureSignedIn() async {
+    if (!isFirebaseReady) return null;
+    final existing = _firebaseAuth.currentUser;
+    if (existing != null) return existing;
+    final cred = await _firebaseAuth.signInAnonymously();
+    return cred.user;
+  }
+
   Future<UserCredential?> signInWithEmail({
     required String email,
     required String password,
@@ -45,10 +53,17 @@ class FirebaseGangRepository {
     required String password,
   }) async {
     if (!isFirebaseReady) return null;
-    return _firebaseAuth.createUserWithEmailAndPassword(
+    final cred = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
+    await cred.user?.sendEmailVerification();
+    return cred;
+  }
+
+  Future<UserCredential?> signInWithGoogle() async {
+    if (!isFirebaseReady) return null;
+    return _firebaseAuth.signInWithProvider(GoogleAuthProvider());
   }
 
   Future<void> signOut() async {
@@ -206,5 +221,35 @@ class FirebaseGangRepository {
     // Deleting the gang document triggers Cloud Function `onGangDeleted`
     // which cascades deletion of subcollections, invite index, and user links.
     await _db.collection('gangs').doc(gangId).delete();
+  }
+
+  Future<Map<String, dynamic>?> fetchGang(String gangId) async {
+    if (!isFirebaseReady) return null;
+    final doc = await _db.collection('gangs').doc(gangId).get();
+    if (!doc.exists) return null;
+    final data = doc.data();
+    if (data == null) return null;
+    return {'id': doc.id, ...data};
+  }
+
+  Future<List<Map<String, dynamic>>> fetchGangMembers(String gangId) async {
+    if (!isFirebaseReady) return const [];
+    final snap = await _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('members')
+        .get();
+    return snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+  }
+
+  Future<List<String>> fetchUserGangIds() async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return const [];
+    final snap = await _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('gangs')
+        .get();
+    return snap.docs.map((d) => d.id).toList();
   }
 }

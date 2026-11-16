@@ -124,8 +124,13 @@ void main() {
       await tester.pumpWidget(GrimGrindApp(store: store));
       await tester.pumpAndSettle();
 
-      // Open gang sheet from AppBar action.
-      await tester.tap(find.byTooltip('Sídlo & Přepínač člena'));
+      // Open Profil tab from bottom NavigationBar.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Profil'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Moje Gangy'));

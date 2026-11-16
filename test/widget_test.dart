@@ -16,7 +16,23 @@ void main() {
     await tester.tap(find.text('Přeskočit'));
     await tester.pumpAndSettle();
 
-    // Step 2: Gang setup
+    // Step 2: Login / Signup gate ("Brána do Sídla")
+    expect(find.text('BRÁNA DO SÍDLA'), findsOneWidget);
+    final guestButton = find.text('Pokračovat anonymně jako host');
+    await tester.scrollUntilVisible(
+      guestButton,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(guestButton);
+    await tester.pumpAndSettle();
+
+    // Step 3: Create Avatar
+    expect(find.text('STVOŘENÍ AVATARA'), findsOneWidget);
+    await tester.tap(find.text('Pokračovat do Sídla'));
+    await tester.pumpAndSettle();
+
+    // Step 4: Gang setup
     expect(find.text('Vstup do Gangu'), findsOneWidget);
     final createButton = find.text('Založit Gang a stát se Rukou');
     await tester.scrollUntilVisible(
@@ -31,13 +47,8 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Zahrát kartu'), findsOneWidget);
 
-    // Open Deck and play a card
-    await tester.tap(
-      find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Deck'),
-      ),
-    );
+    // Open Deck from Feed's "Zahrát kartu" FAB and play a card
+    await tester.tap(find.text('Zahrát kartu'));
     await tester.pumpAndSettle();
     expect(find.text('Vyber splněnou kartu'), findsOneWidget);
     expect(find.text('Vynést koš'), findsOneWidget);
@@ -48,10 +59,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(store.bankCoinsFor(store.currentMember!.id), greaterThan(0));
 
-    // Open Bank
-    await tester.tap(find.text('Bank'));
+    // Deck automatically closes back to Chronicle after playing a card
+    expect(find.byType(NavigationBar), findsOneWidget);
+
+    // Open Pouch
+    await tester.tap(find.text('Pouch'));
     await tester.pumpAndSettle();
-    expect(find.text('Bank & Směna u Ruky'), findsOneWidget);
+    expect(find.text('Mešec & Směna u Ruky'), findsOneWidget);
     expect(find.textContaining('Požádat Ruku o směnu'), findsOneWidget);
 
     // Open Leaderboard

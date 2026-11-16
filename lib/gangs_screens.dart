@@ -271,6 +271,15 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
   final TextEditingController _nicknameController = TextEditingController();
   MemberSex _selectedSex = MemberSex.male;
   String? _errorText;
+  bool _isSubmitting = false;
+  String? _remoteMatchedGangName;
+  String? _lastLookedUpCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeLookupRemoteInvite(_resolveCode(_codeController.text));
+  }
 
   @override
   void dispose() {
@@ -279,16 +288,39 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final rawInput = _codeController.text.trim();
+  String _resolveCode(String raw) {
+    final rawInput = raw.trim();
     final parsedUri = Uri.tryParse(rawInput);
-    final resolvedCode = (parsedUri != null && rawInput.contains('://'))
+    return (parsedUri != null && rawInput.contains('://'))
         ? (MansionStore.parseInviteCodeFromUri(parsedUri) ?? rawInput)
         : rawInput.toUpperCase();
+  }
+
+  Future<void> _maybeLookupRemoteInvite(String resolvedCode) async {
+    if (!widget.store.isFirebaseReady || resolvedCode.length < 4) {
+      if (_remoteMatchedGangName != null) {
+        setState(() => _remoteMatchedGangName = null);
+      }
+      return;
+    }
+    if (widget.store.findGangByInviteCode(resolvedCode) != null) return;
+    if (_lastLookedUpCode == resolvedCode) return;
+    _lastLookedUpCode = resolvedCode;
+    final data = await widget.store.lookupRemoteInvite(resolvedCode);
+    if (!mounted) return;
+    if (_resolveCode(_codeController.text) != resolvedCode) return;
+    setState(() {
+      _remoteMatchedGangName = data?['gangName'] as String?;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedCode = _resolveCode(_codeController.text);
     final matchedGang = widget.store.findGangByInviteCode(resolvedCode);
+    final matchedGangName = matchedGang?.name ?? _remoteMatchedGangName;
     final matchedCount =
-        matchedGang != null ? widget.store.memberCountIn(matchedGang.id) : 0;
+        matchedGang != null ? widget.store.memberCountIn(matchedGang.id) : null;
 
     return _GothicModalFrame(
       child: Column(
@@ -325,7 +357,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
           const SizedBox(height: 10),
           const Divider(color: _gothBorder, height: 1),
           const SizedBox(height: 10),
-          if (matchedGang != null)
+          if (matchedGangName != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(bottom: 10),
@@ -337,7 +369,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               child: Column(
                 children: [
                   Text(
-                    'Pozvánka do: ${matchedGang.name}',
+                    'Pozvánka do: $matchedGangName',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: _goldAccent,
@@ -345,18 +377,28 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                       fontSize: 14,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$matchedCount stávajících členů',
-                    style: const TextStyle(color: _mutedStone, fontSize: 11),
-                  ),
+                  if (matchedCount != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '$matchedCount stávajících členů',
+                      style: const TextStyle(color: _mutedStone, fontSize: 11),
+                    ),
+                  ],
                 ],
               ),
             ),
           TextField(
             controller: _codeController,
             textCapitalization: TextCapitalization.characters,
-            onChanged: (_) => setState(() => _errorText = null),
+            onChanged: (value) {
+              setState(() {
+                _errorText = null;
+                if (widget.store.findGangByInviteCode(_resolveCode(value)) == null) {
+                  _remoteMatchedGangName = null;
+                }
+              });
+              _maybeLookupRemoteInvite(_resolveCode(value));
+            },
             decoration: InputDecoration(
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
@@ -368,8 +410,10 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               labelText: 'Zvací kód nebo odkaz',
               hintText: 'GRIM-42 nebo https://grim-grind.web.app/join?code=...',
               suffixIcon: Icon(
-                matchedGang != null ? Icons.verified : Icons.vpn_key_outlined,
-                color: matchedGang != null ? _goldAccent : _mutedStone,
+                matchedGangName != null
+                    ? Icons.verified
+                    : Icons.vpn_key_outlined,
+                color: matchedGangName != null ? _goldAccent : _mutedStone,
                 size: 18,
               ),
               border: const OutlineInputBorder(),
@@ -421,19 +465,31 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                 flex: 2,
                 child: _BloodWineButton(
                   icon: Icons.login,
-                  label: 'Připojit se',
-                  onPressed: () {
-                    final ok = widget.store.joinGangByCode(
-                      inviteCode: resolvedCode,
-                      nickname: _nicknameController.text,
-                      sex: _selectedSex,
-                    );
-                    if (!ok) {
-                      setState(() => _errorText = 'Neplatný zvací kód Gangu.');
-                      return;
-                    }
-                    Navigator.pop(context, true);
-                  },
+                  label: _isSubmitting ? 'Připojuji se...' : 'Připojit se',
+                  onPressed: _isSubmitting
+                      ? () {}
+                      : () async {
+                          final navigator = Navigator.of(context);
+                          setState(() {
+                            _isSubmitting = true;
+                            _errorText = null;
+                          });
+                          final ok = await widget.store.joinGangByCodeAsync(
+                            inviteCode: resolvedCode,
+                            nickname: _nicknameController.text,
+                            sex: _selectedSex,
+                          );
+                          if (!mounted) return;
+                          if (!ok) {
+                            setState(() {
+                              _isSubmitting = false;
+                              _errorText = widget.store.lastSyncError ??
+                                  'Neplatný zvací kód Gangu.';
+                            });
+                            return;
+                          }
+                          navigator.pop(true);
+                        },
                 ),
               ),
             ],
@@ -469,24 +525,20 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
   late final TextEditingController _nickController = TextEditingController(
     text: widget.store.currentMember?.nickname ?? 'Dark Lord',
   );
-  final TextEditingController _rateController = TextEditingController(
-    text: '10',
-  );
   late MemberSex _founderSex =
       widget.store.currentMember?.sex ?? MemberSex.male;
+  bool _isSubmitting = false;
+  String? _errorText;
 
   @override
   void dispose() {
     _gangController.dispose();
     _nickController.dispose();
-    _rateController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final parsedRate = int.tryParse(_rateController.text) ?? 10;
-
     return _GothicModalFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -557,41 +609,22 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
             selected: _founderSex,
             onChanged: (sex) => setState(() => _founderSex = sex),
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _rateController,
-                  keyboardType: TextInputType.number,
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    filled: true,
-                    fillColor: _voidBg,
-                    labelText: 'Kurz: kolik Coinů = 1 Kč',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: _voidBg,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: _gothBorder),
-                ),
-                child: Text(
-                  '$parsedRate Zl = 1 Kč',
-                  style: const TextStyle(color: _mutedStone, fontSize: 11),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 16),
+          if (_errorText != null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _bloodWine.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _bloodBorder),
+              ),
+              child: Text(
+                _errorText!,
+                style: const TextStyle(color: _bloodBorder, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           const Divider(color: _gothBorder, height: 1),
           const SizedBox(height: 12),
           Row(
@@ -610,17 +643,31 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
                 flex: 2,
                 child: _BloodWineButton(
                   icon: Icons.castle_outlined,
-                  label: 'Založit',
-                  onPressed: () {
-                    final rate = int.tryParse(_rateController.text) ?? 10;
-                    widget.store.createGang(
-                      gangName: _gangController.text,
-                      founderNickname: _nickController.text,
-                      founderSex: _founderSex,
-                      coinsPerCzk: rate,
-                    );
-                    Navigator.pop(context, true);
-                  },
+                  label: _isSubmitting ? 'Zakládám...' : 'Založit',
+                  onPressed: _isSubmitting
+                      ? () {}
+                      : () async {
+                          final navigator = Navigator.of(context);
+                          setState(() {
+                            _isSubmitting = true;
+                            _errorText = null;
+                          });
+                          final ok = await widget.store.createGangAsync(
+                            gangName: _gangController.text,
+                            founderNickname: _nickController.text,
+                            founderSex: _founderSex,
+                          );
+                          if (!mounted) return;
+                          if (!ok) {
+                            setState(() {
+                              _isSubmitting = false;
+                              _errorText = widget.store.lastSyncError ??
+                                  'Nepodařilo se založit Gang.';
+                            });
+                            return;
+                          }
+                          navigator.pop(true);
+                        },
                 ),
               ),
             ],
