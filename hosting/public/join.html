@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GrimGrind • Pozvánka do Gangu</title>
+  <style>
+    :root {
+      --void: #0B0B0D;
+      --coal: #17171A;
+      --bone: #E9E0D0;
+      --gold: #C6A15B;
+      --wine: #6E1830;
+      --border: #3B3329;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, #1b1318 0%, var(--void) 60%);
+      color: var(--bone);
+      font-family: Georgia, "Times New Roman", serif;
+    }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--coal);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+    .seal {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    h1 {
+      margin: 16px 0 8px;
+      font-size: 28px;
+      letter-spacing: 0.06em;
+      color: var(--bone);
+    }
+    p {
+      margin: 0 0 18px;
+      line-height: 1.5;
+      color: #c8bfb0;
+      font-size: 15px;
+    }
+    .code-box {
+      background: var(--void);
+      border: 1px dashed var(--gold);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 18px;
+    }
+    .code-label {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #9e9588;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .code-value {
+      margin-top: 4px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--gold);
+      font-family: monospace;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      margin-bottom: 10px;
+    }
+    .btn-primary {
+      background: var(--wine);
+      color: var(--bone);
+      border-color: #9b3b48;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+    .btn-ghost {
+      background: #111114;
+      color: var(--bone);
+      border-color: var(--border);
+    }
+    .divider {
+      margin: 18px 0 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      font-size: 13px;
+      color: #9e9588;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <span class="seal">GrimGrind • Pozvánka do sídla</span>
+    <h1>Přidej se ke Gangu</h1>
+    <p>Byl jsi pozván do společného sídla v aplikaci <strong>GrimGrind</strong>. Otevři aplikaci a přijmi pozvánku, nebo si ji nejprve nainstaluj.</p>
+
+    <div class="code-box">
+      <div class="code-label">Zvací kód Gangu</div>
+      <div id="inviteCode" class="code-value">GRIM-42</div>
+    </div>
+
+    <a id="openAppBtn" class="btn btn-primary" href="grimgrind://join">Otevřít v aplikaci GrimGrind</a>
+    <button id="copyBtn" class="btn btn-ghost" type="button">Zkopírovat zvací kód</button>
+
+    <div class="divider">Nemáš ještě aplikaci nainstalovanou?</div>
+    <a class="btn btn-secondary" href="https://github.com/stereoit/grimgrind/releases/latest/download/grimgrind.apk">Stáhnout pro Android (APK)</a>
+    <a class="btn btn-ghost" href="https://appdistribution.firebase.dev/i/152f586ed88ca49c">Instalovat přes Firebase App Distribution (iOS / Android)</a>
+  </main>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      let code = params.get('code');
+      if (!code && pathParts.length >= 2 && pathParts[0] === 'join') {
+        code = pathParts[1];
+      }
+      code = (code || 'GRIM-42').trim().toUpperCase();
+
+      document.getElementById('inviteCode').textContent = code;
+      const deepLink = 'grimgrind://join?code=' + encodeURIComponent(code);
+      document.getElementById('openAppBtn').setAttribute('href', deepLink);
+
+      document.getElementById('copyBtn').addEventListener('click', function () {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(code);
+          this.textContent = 'Kód zkopírován: ' + code;
+        }
+      });
+
+      // Attempt automatic handoff when opened on mobile with app installed.
+      setTimeout(function () {
+        window.location.href = deepLink;
+      }, 250);
+    })();
+  </script>
+</body>
+</html>

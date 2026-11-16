@@ -15,6 +15,7 @@ service cloud.firestore {
       allow read: if isGangMember(gangId);
       allow create: if signedIn() && request.resource.data.founderId == request.auth.uid;
       allow update: if isGangHand(gangId);
+      allow delete: if isGangHand(gangId);
 
       match /members/{memberId} {
         allow read: if isGangMember(gangId);
@@ -52,6 +53,16 @@ service cloud.firestore {
         allow read: if isGangMember(gangId);
         allow write: if false;
       }
+    }
+
+    match /invites/{inviteCode} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.founderId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.founderId == request.auth.uid;
+    }
+
+    match /users/{userId}/gangs/{gangId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
     }
 
     match /app_config/distribution {

@@ -215,11 +215,53 @@ class FeedEntry {
   final HeatLevel? heatAtEvent;
 }
 
+/// Grammatical sex/gender used for localized wording in Feed & notifications.
+enum MemberSex { male, female, neutral }
+
+extension MemberSexData on MemberSex {
+  String get label => switch (this) {
+    MemberSex.male => 'Muž',
+    MemberSex.female => 'Žena',
+    MemberSex.neutral => 'Neutrální',
+  };
+
+  String get playedVerb => switch (this) {
+    MemberSex.male => 'zahrál',
+    MemberSex.female => 'zahrála',
+    MemberSex.neutral => 'zahráli',
+  };
+
+  String get storedVerb => switch (this) {
+    MemberSex.male => 'uložil',
+    MemberSex.female => 'uložila',
+    MemberSex.neutral => 'uložili',
+  };
+
+  String get exchangedVerb => switch (this) {
+    MemberSex.male => 'směnil',
+    MemberSex.female => 'směnila',
+    MemberSex.neutral => 'směnili',
+  };
+
+  String get winnerRole => switch (this) {
+    MemberSex.male => 'Vládcem',
+    MemberSex.female => 'Vládkyní',
+    MemberSex.neutral => 'Vládcem',
+  };
+
+  String get becameVerb => switch (this) {
+    MemberSex.male => 'se stal',
+    MemberSex.female => 'se stala',
+    MemberSex.neutral => 'se stali',
+  };
+}
+
 class GangMember {
   GangMember({
     required this.id,
     required this.nickname,
     required this.isHand,
+    this.sex = MemberSex.male,
     this.heatPeakDays = 0,
     this.lastActiveDay,
   });
@@ -227,6 +269,7 @@ class GangMember {
   final String id;
   String nickname;
   final bool isHand;
+  MemberSex sex;
 
   /// Accumulated streak days used for heating up / cooling down.
   int heatPeakDays;
@@ -244,11 +287,15 @@ class Gang {
 
   final String id;
   String name;
-  final String inviteCode;
+  String inviteCode;
   final String founderId;
 
   /// How many Coins equal 1 CZK (editable by the Hand / founder).
   int coinsPerCzk;
+
+  static const String inviteBaseUrl = 'https://grim-grind.web.app/join';
+
+  String get inviteUrl => '$inviteBaseUrl?code=${Uri.encodeComponent(inviteCode)}';
 }
 
 enum LeaderboardSort { mostActive, mostHardWorking, byStreakLevel }

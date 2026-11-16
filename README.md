@@ -119,9 +119,18 @@ Projekt je navázaný přes `.firebaserc` na Firebase project ID `grim-grind`. P
 
 ```sh
 npx firebase-tools login
-npx firebase-tools deploy --project grim-grind --only firestore,functions
+npx firebase-tools deploy --project grim-grind --only firestore,functions,hosting
 ```
 
-Cloud Functions `notifyPlayedCard` a `recordApprovedExchange` reagují na zahrání karty do `gangs/{gangId}/played_cards` a schválení směny v `gangs/{gangId}/exchanges`, zapisují záznamy do `gangs/{gangId}/feed` a odesílají FCM zprávy na topic `gang_{gangId}`. Mobilní klient musí po přihlášení uložit FCM token a přihlásit jej k tomuto topicu; pro produkční zapojení je rovněž nutné vygenerovat `firebase_options.dart` příkazem `flutterfire configure --project grim-grind`.
+Cloud Functions `notifyPlayedCard`, `recordApprovedExchange` a `onGangDeleted` reagují na zahrání karty do `gangs/{gangId}/played_cards`, schválení směny v `gangs/{gangId}/exchanges` a smazání Gangu `gangs/{gangId}` (rekurzivní úklid subkolekcí a `invites/{code}`), zapisují záznamy do `gangs/{gangId}/feed` (včetně skloňování podle `memberSex`) a odesílají FCM zprávy na topic `gang_{gangId}`. Mobilní klient musí po přihlášení uložit FCM token a přihlásit jej k tomuto topicu; pro produkční zapojení je rovněž nutné vygenerovat `firebase_options.dart` příkazem `flutterfire configure --project grim-grind`.
 
-Kolekce jsou `gangs/{gangId}/members`, `gangs/{gangId}/played_cards`, `gangs/{gangId}/exchanges` a `gangs/{gangId}/feed`. Feed a notifikace v produkci zapisuje důvěryhodný backend.
+Kolekce jsou `gangs/{gangId}/members`, `gangs/{gangId}/played_cards`, `gangs/{gangId}/exchanges`, `gangs/{gangId}/feed`, veřejný zvací index `invites/{inviteCode}` a `users/{userId}/gangs/{gangId}`.
+
+### Zvací odkazy (Firebase Hosting & App Links)
+- Webová pozvánka běží na `https://grim-grind.web.app/join?code=<CODE>` ([`hosting/public/join.html`](hosting/public/join.html)), odkud lze aplikaci rovnou otevřít (`grimgrind://join?code=<CODE>`) nebo nainstalovat.
+- Pro ověřené Android App Links a iOS Universal Links doplň produkční SHA-256 otisk a Apple Team ID do [`.well-known/assetlinks.json`](hosting/public/.well-known/assetlinks.json) a [`.well-known/apple-app-site-association`](hosting/public/.well-known/apple-app-site-association).
+
+### Stitch obrazovky & Firebase Test Cases
+- Návrhové specifikace a prompty pro Stitch MCP jsou v [`docs/stitch_gangs_screens.md`](docs/stitch_gangs_screens.md).
+- Scénáře pro **Firebase App Distribution → Test Cases** (správa Gangů, pozvánky, skloňování podle pohlaví a nebezpečné smazání Gangu) jsou v [`docs/firebase_test_cases.md`](docs/firebase_test_cases.md).
+

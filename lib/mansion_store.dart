@@ -2,6 +2,27 @@ import 'package:flutter/foundation.dart';
 
 import 'models.dart';
 
+class GangWorkspace {
+  GangWorkspace({
+    required this.gang,
+    required this.currentMemberId,
+    List<GangMember>? members,
+    List<PlayedCard>? playedCards,
+    List<ExchangeRequest>? exchangeRequests,
+    List<FeedEntry>? feedEntries,
+  }) : members = members ?? [],
+       playedCards = playedCards ?? [],
+       exchangeRequests = exchangeRequests ?? [],
+       feedEntries = feedEntries ?? [];
+
+  final Gang gang;
+  String? currentMemberId;
+  final List<GangMember> members;
+  final List<PlayedCard> playedCards;
+  final List<ExchangeRequest> exchangeRequests;
+  final List<FeedEntry> feedEntries;
+}
+
 class MansionStore extends ChangeNotifier {
   MansionStore({DateTime Function()? clock, bool seedDemo = false})
     : _clock = clock ?? DateTime.now {
@@ -14,13 +35,44 @@ class MansionStore extends ChangeNotifier {
   int _idSeq = 100;
 
   bool hasSeenIntro = false;
-  Gang? gang;
-  String? currentMemberId;
+  String? pendingInviteCode;
 
-  final List<GangMember> members = [];
-  final List<PlayedCard> playedCards = [];
-  final List<ExchangeRequest> exchangeRequests = [];
-  final List<FeedEntry> feedEntries = [];
+  final List<GangWorkspace> _workspaces = [];
+  String? _activeGangId;
+
+  final List<GangMember> _emptyMembers = [];
+  final List<PlayedCard> _emptyPlayedCards = [];
+  final List<ExchangeRequest> _emptyExchangeRequests = [];
+  final List<FeedEntry> _emptyFeedEntries = [];
+
+  GangWorkspace? get _activeWorkspace {
+    final id = _activeGangId;
+    if (id == null) return null;
+    for (final ws in _workspaces) {
+      if (ws.gang.id == id) return ws;
+    }
+    return null;
+  }
+
+  List<Gang> get myGangs => _workspaces.map((w) => w.gang).toList();
+
+  Gang? get gang => _activeWorkspace?.gang;
+
+  String? get currentMemberId => _activeWorkspace?.currentMemberId;
+  set currentMemberId(String? value) {
+    final ws = _activeWorkspace;
+    if (ws != null) {
+      ws.currentMemberId = value;
+    }
+  }
+
+  List<GangMember> get members => _activeWorkspace?.members ?? _emptyMembers;
+  List<PlayedCard> get playedCards =>
+      _activeWorkspace?.playedCards ?? _emptyPlayedCards;
+  List<ExchangeRequest> get exchangeRequests =>
+      _activeWorkspace?.exchangeRequests ?? _emptyExchangeRequests;
+  List<FeedEntry> get feedEntries =>
+      _activeWorkspace?.feedEntries ?? _emptyFeedEntries;
 
   List<ChoreDefinition> get deck => choreCatalog;
 
@@ -36,6 +88,36 @@ class MansionStore extends ChangeNotifier {
   }
 
   bool get isCurrentUserHand => currentMember?.isHand ?? false;
+
+  bool isOwnerOf(String gangId) {
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) {
+        final memberId = ws.currentMemberId;
+        if (memberId == null) return false;
+        return ws.members.any((m) => m.id == memberId && m.isHand);
+      }
+    }
+    return false;
+  }
+
+  String? memberNicknameIn(String gangId) {
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) {
+        final memberId = ws.currentMemberId;
+        for (final m in ws.members) {
+          if (m.id == memberId) return m.nickname;
+        }
+      }
+    }
+    return null;
+  }
+
+  int memberCountIn(String gangId) {
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) return ws.members.length;
+    }
+    return 0;
+  }
 
   String monthKeyFor(DateTime dt) =>
       '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
@@ -53,7 +135,7 @@ class MansionStore extends ChangeNotifier {
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   // ---------------------------------------------------------------------------
-  // Onboarding & Gang lifecycle
+  // Onboarding, Deep Links & Multi-Gang Lifecycle
   // ---------------------------------------------------------------------------
 
   void completeIntro() {
@@ -62,9 +144,62 @@ class MansionStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  static String? parseInviteCodeFromUri(Uri uri) {
+    final queryCode = uri.queryParameters['code']?.trim();
+    if (queryCode != null && queryCode.isNotEmpty) {
+      return queryCode.toUpperCase();
+    }
+    final segments = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+    if (segments.length >= 2 && segments.first == 'join') {
+      return segments[1].trim().toUpperCase();
+    }
+    if (uri.scheme == 'grimgrind' &&
+        uri.host == 'join' &&
+        segments.isNotEmpty) {
+      return segments.first.trim().toUpperCase();
+    }
+    return null;
+  }
+
+  void setPendingInviteCode(String? code) {
+    final clean = code?.trim().toUpperCase();
+    pendingInviteCode = (clean == null || clean.isEmpty) ? null : clean;
+    notifyListeners();
+  }
+
+  void clearPendingInviteCode() {
+    if (pendingInviteCode == null) return;
+    pendingInviteCode = null;
+    notifyListeners();
+  }
+
+  Gang? findGangByInviteCode(String inviteCode) {
+    final cleanCode = inviteCode.trim().toUpperCase();
+    if (cleanCode.isEmpty) return null;
+    for (final ws in _workspaces) {
+      if (ws.gang.inviteCode.toUpperCase() == cleanCode) {
+        return ws.gang;
+      }
+    }
+    return null;
+  }
+
+  bool switchGang(String gangId) {
+    if (!_workspaces.any((w) => w.gang.id == gangId)) return false;
+    _activeGangId = gangId;
+    notifyListeners();
+    return true;
+  }
+
+  String _generateInviteCode(DateTime now) {
+    final suffix = 10 + (now.minute + now.second + _idSeq) % 89;
+    return 'GRIM-$suffix';
+  }
+
   void createGang({
     required String gangName,
     required String founderNickname,
+    MemberSex founderSex = MemberSex.male,
     int coinsPerCzk = 10,
     bool includeStarterFamily = false,
   }) {
@@ -79,23 +214,23 @@ class MansionStore extends ChangeNotifier {
       id: _nextId('member'),
       nickname: cleanNick,
       isHand: true,
+      sex: founderSex,
     );
 
-    members
-      ..clear()
-      ..add(founder);
-    playedCards.clear();
-    exchangeRequests.clear();
-    feedEntries.clear();
-
-    gang = Gang(
+    final newGang = Gang(
       id: _nextId('gang'),
       name: cleanGang,
-      inviteCode: 'GRIM-${10 + (now.minute + now.second) % 89}',
+      inviteCode: _generateInviteCode(now),
       founderId: founder.id,
       coinsPerCzk: coinsPerCzk.clamp(1, 1000),
     );
-    currentMemberId = founder.id;
+    final ws = GangWorkspace(
+      gang: newGang,
+      currentMemberId: founder.id,
+      members: [founder],
+    );
+    _workspaces.add(ws);
+    _activeGangId = newGang.id;
     hasSeenIntro = true;
 
     if (includeStarterFamily) {
@@ -107,33 +242,84 @@ class MansionStore extends ChangeNotifier {
   bool joinGangByCode({
     required String inviteCode,
     required String nickname,
+    MemberSex sex = MemberSex.male,
   }) {
     final cleanCode = inviteCode.trim().toUpperCase();
     final cleanNick = nickname.trim().isEmpty ? 'Shadow' : nickname.trim();
     if (cleanCode.isEmpty) return false;
 
-    if (gang == null) {
-      // Allow local/offline joining into a demo mansion when user enters a code.
-      _seedSampleMansion(overrideInviteCode: cleanCode);
-    } else if (gang!.inviteCode.toUpperCase() != cleanCode) {
-      return false;
+    GangWorkspace? target;
+    for (final ws in _workspaces) {
+      if (ws.gang.inviteCode.toUpperCase() == cleanCode) {
+        target = ws;
+        break;
+      }
     }
 
-    final existing = members.where(
+    if (target == null) {
+      if (_workspaces.isEmpty) {
+        // Allow local/offline joining into a demo mansion when user enters a code.
+        _seedSampleMansion(overrideInviteCode: cleanCode);
+        target = _activeWorkspace;
+      } else {
+        return false;
+      }
+    }
+
+    if (target == null) return false;
+    _activeGangId = target.gang.id;
+
+    final existing = target.members.where(
       (m) => m.nickname.toLowerCase() == cleanNick.toLowerCase(),
     );
     if (existing.isNotEmpty) {
-      currentMemberId = existing.first.id;
+      existing.first.sex = sex;
+      target.currentMemberId = existing.first.id;
     } else {
       final newcomer = GangMember(
         id: _nextId('member'),
         nickname: cleanNick,
         isHand: false,
+        sex: sex,
       );
-      members.add(newcomer);
-      currentMemberId = newcomer.id;
+      target.members.add(newcomer);
+      target.currentMemberId = newcomer.id;
     }
     hasSeenIntro = true;
+    pendingInviteCode = null;
+    notifyListeners();
+    return true;
+  }
+
+  String? regenerateInviteCode(String gangId) {
+    if (!isOwnerOf(gangId)) return null;
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) {
+        var nextCode = _generateInviteCode(_clock());
+        if (nextCode == ws.gang.inviteCode) {
+          _idSeq++;
+          nextCode = _generateInviteCode(_clock());
+        }
+        ws.gang.inviteCode = nextCode;
+        notifyListeners();
+        return nextCode;
+      }
+    }
+    return null;
+  }
+
+  bool deleteGang(String gangId, {required String confirmationName}) {
+    if (!isOwnerOf(gangId)) return false;
+    final index = _workspaces.indexWhere((w) => w.gang.id == gangId);
+    if (index < 0) return false;
+    final target = _workspaces[index];
+    if (confirmationName.trim() != target.gang.name.trim()) {
+      return false;
+    }
+    _workspaces.removeAt(index);
+    if (_activeGangId == gangId) {
+      _activeGangId = _workspaces.isEmpty ? null : _workspaces.first.gang.id;
+    }
     notifyListeners();
     return true;
   }
@@ -143,11 +329,20 @@ class MansionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addMember(String nickname, {bool isHand = false}) {
+  void addMember(
+    String nickname, {
+    bool isHand = false,
+    MemberSex sex = MemberSex.male,
+  }) {
     final clean = nickname.trim();
     if (clean.isEmpty || gang == null) return;
     members.add(
-      GangMember(id: _nextId('member'), nickname: clean, isHand: isHand),
+      GangMember(
+        id: _nextId('member'),
+        nickname: clean,
+        isHand: isHand,
+        sex: sex,
+      ),
     );
     notifyListeners();
   }
@@ -287,7 +482,8 @@ class MansionStore extends ChangeNotifier {
         type: FeedEntryType.cardPlayed,
         actorNickname: member.nickname,
         title: chore.title,
-        message: 'zahrál kartu „${chore.title}“ a uložil $coins Coinů do Banku.',
+        message:
+            '${member.sex.playedVerb} kartu „${chore.title}“ a ${member.sex.storedVerb} $coins Coinů do Banku.',
         createdAt: now,
         monthKey: played.monthKey,
         choreId: chore.id,
@@ -455,6 +651,12 @@ class MansionStore extends ChangeNotifier {
       ..approvedByNickname = hand.nickname
       ..totalCoins = approvedCards.fold(0, (sum, c) => sum + c.coinsAwarded);
 
+    final requester = members
+        .where((m) => m.id == req!.memberId)
+        .cast<GangMember?>()
+        .firstWhere((_) => true, orElse: () => null);
+    final exchangedVerb = requester?.sex.exchangedVerb ?? 'směnili';
+
     feedEntries.insert(
       0,
       FeedEntry(
@@ -463,7 +665,7 @@ class MansionStore extends ChangeNotifier {
         actorNickname: req.memberNickname,
         title: 'Směna schválena Rukou',
         message:
-            '${req.memberNickname} směnili ${approvedCards.length} karet za ${req.totalCoins} Coinů (${req.czkAmount} Kč).',
+            '${req.memberNickname} $exchangedVerb ${approvedCards.length} karet za ${req.totalCoins} Coinů (${req.czkAmount} Kč).',
         createdAt: now,
         monthKey: req.monthKey,
         symbol: '☞',
@@ -518,7 +720,7 @@ class MansionStore extends ChangeNotifier {
         title: 'Měsíční vyhlášení • $key',
         message: winner == null
             ? 'Měsíc $key byl uzavřen. Levely se s novým měsícem resetují na Probuzený.'
-            : 'Vládcem měsíce $key se stává ${winner.member.nickname} (${winner.approvedCoins} Coinů, ${winner.approvedTaskCount} úkolů).',
+            : '${winner.member.sex.winnerRole} měsíce $key ${winner.member.sex.becameVerb} ${winner.member.nickname} (${winner.approvedCoins} Coinů, ${winner.approvedTaskCount} úkolů).',
         createdAt: now,
         monthKey: key,
         symbol: '♛',
@@ -606,22 +808,25 @@ class MansionStore extends ChangeNotifier {
       id: 'member-1',
       nickname: 'Dark Lord',
       isHand: true,
+      sex: MemberSex.male,
     );
-    members
-      ..clear()
-      ..add(founder);
-    playedCards.clear();
-    exchangeRequests.clear();
-    feedEntries.clear();
 
-    gang = Gang(
+    final demoGang = Gang(
       id: 'gang-demo',
       name: 'Sídlo Addamsů',
       inviteCode: overrideInviteCode ?? 'GRIM-42',
       founderId: founder.id,
       coinsPerCzk: 10,
     );
-    currentMemberId = founder.id;
+    _workspaces.removeWhere((w) => w.gang.id == demoGang.id);
+    _workspaces.add(
+      GangWorkspace(
+        gang: demoGang,
+        currentMemberId: founder.id,
+        members: [founder],
+      ),
+    );
+    _activeGangId = demoGang.id;
     hasSeenIntro = true;
 
     _populateGangWithSampleHistory(founder, referenceNow: now);
@@ -640,6 +845,7 @@ class MansionStore extends ChangeNotifier {
       id: _nextId('member'),
       nickname: 'Královna sídla',
       isHand: false,
+      sex: MemberSex.female,
       heatPeakDays: 7,
       lastActiveDay: _dateOnly(now),
     );
@@ -647,6 +853,7 @@ class MansionStore extends ChangeNotifier {
       id: _nextId('member'),
       nickname: 'Shadow Master',
       isHand: false,
+      sex: MemberSex.male,
       heatPeakDays: 3,
       lastActiveDay: _dateOnly(now.subtract(const Duration(days: 1))),
     );

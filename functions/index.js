@@ -1,9 +1,23 @@
-const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {
+  onDocumentCreated,
+  onDocumentUpdated,
+  onDocumentDeleted,
+} = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {getMessaging} = require("firebase-admin/messaging");
 
 initializeApp();
+
+function verbsForSex(sex) {
+  if (sex === "female") {
+    return {played: "zahrála", stored: "uložila", exchanged: "směnila"};
+  }
+  if (sex === "neutral") {
+    return {played: "zahráli", stored: "uložili", exchanged: "směnili"};
+  }
+  return {played: "zahrál", stored: "uložil", exchanged: "směnil"};
+}
 
 exports.notifyPlayedCard = onDocumentCreated(
   "gangs/{gangId}/played_cards/{cardId}",
@@ -11,12 +25,13 @@ exports.notifyPlayedCard = onDocumentCreated(
     const data = event.data.data();
     const gangId = event.params.gangId;
     const db = getFirestore();
+    const verbs = verbsForSex(data.memberSex);
 
     await db.collection(`gangs/${gangId}/feed`).add({
       type: "cardPlayed",
       actorNickname: data.memberNickname,
       title: data.choreTitle,
-      message: `zahrál kartu „${data.choreTitle}“ a uložil ${data.coinsAwarded} Coinů do Banku.`,
+      message: `${verbs.played} kartu „${data.choreTitle}“ a ${verbs.stored} ${data.coinsAwarded} Coinů do Banku.`,
       choreId: data.choreId,
       coins: data.coinsAwarded,
       monthKey: data.monthKey,
@@ -26,7 +41,7 @@ exports.notifyPlayedCard = onDocumentCreated(
     await getMessaging().send({
       topic: `gang_${gangId}`,
       notification: {
-        title: `${data.memberNickname} zahrál kartu`,
+        title: `${data.memberNickname} ${verbs.played} kartu`,
         body: `${data.choreTitle} (+${data.coinsAwarded} Coinů do Banku).`,
       },
       data: {gangId, choreId: data.choreId, type: "cardPlayed"},
@@ -43,17 +58,47 @@ exports.recordApprovedExchange = onDocumentUpdated(
 
     const gangId = event.params.gangId;
     const czk = Math.round(after.totalCoins / (after.coinsPerCzk || 10));
+    const verbs = verbsForSex(after.memberSex);
 
     await getFirestore().collection(`gangs/${gangId}/feed`).add({
       type: "exchangeApproved",
       actorNickname: after.memberNickname,
       title: "Směna schválena Rukou",
-      message: `${after.memberNickname} směnili ${after.cardIds.length} karet za ${after.totalCoins} Coinů (${czk} Kč).`,
+      message: `${after.memberNickname} ${verbs.exchanged} ${after.cardIds.length} karet za ${after.totalCoins} Coinů (${czk} Kč).`,
       coins: after.totalCoins,
       czkAmount: czk,
       cardCount: after.cardIds.length,
       monthKey: after.monthKey,
       createdAt: FieldValue.serverTimestamp(),
     });
+  },
+);
+
+exports.onGangDeleted = onDocumentDeleted(
+  "gangs/{gangId}",
+  async (event) => {
+    const deleted = event.data ? event.data.data() : null;
+    const gangId = event.params.gangId;
+    const db = getFirestore();
+
+    if (deleted && deleted.inviteCode) {
+      await db.collection("invites").doc(String(deleted.inviteCode).toUpperCase()).delete();
+    }
+
+    const membersSnap = await db.collection(`gangs/${gangId}/members`).get();
+    for (const memberDoc of membersSnap.docs) {
+      await db.collection(`users/${memberDoc.id}/gangs`).doc(gangId).delete();
+    }
+
+    const subcollections = ["members", "played_cards", "exchanges", "feed"];
+    for (const sub of subcollections) {
+      const snap = await db.collection(`gangs/${gangId}/${sub}`).get();
+      if (snap.empty) continue;
+      const batch = db.batch();
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+    }
   },
 );

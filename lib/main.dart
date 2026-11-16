@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'gangs_screens.dart';
 import 'mansion_store.dart';
 import 'models.dart';
 import 'update_checker.dart';
@@ -304,10 +305,22 @@ class _GangSetupScreen extends StatefulWidget {
 class _GangSetupScreenState extends State<_GangSetupScreen> {
   bool _createMode = true;
   bool _includeStarterFamily = true;
+  MemberSex _selectedSex = MemberSex.male;
   final _gangNameController = TextEditingController(text: 'Sídlo Addamsů');
   final _nicknameController = TextEditingController(text: 'Dark Lord');
   final _rateController = TextEditingController(text: '10');
-  final _inviteCodeController = TextEditingController(text: 'GRIM-42');
+  late final TextEditingController _inviteCodeController =
+      TextEditingController(
+        text: widget.store.pendingInviteCode ?? 'GRIM-42',
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.store.pendingInviteCode != null) {
+      _createMode = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -384,6 +397,11 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+              MemberSexSelector(
+                selected: _selectedSex,
+                onChanged: (sex) => setState(() => _selectedSex = sex),
+              ),
+              const SizedBox(height: 14),
               TextField(
                 controller: _rateController,
                 keyboardType: TextInputType.number,
@@ -410,6 +428,7 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                   widget.store.createGang(
                     gangName: _gangNameController.text,
                     founderNickname: _nicknameController.text,
+                    founderSex: _selectedSex,
                     coinsPerCzk: rate,
                     includeStarterFamily: _includeStarterFamily,
                   );
@@ -435,12 +454,18 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 14),
+              MemberSexSelector(
+                selected: _selectedSex,
+                onChanged: (sex) => setState(() => _selectedSex = sex),
+              ),
               const SizedBox(height: 20),
               FilledButton.icon(
                 onPressed: () {
                   final ok = widget.store.joinGangByCode(
                     inviteCode: _inviteCodeController.text,
                     nickname: _nicknameController.text,
+                    sex: _selectedSex,
                   );
                   if (!ok && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -489,6 +514,14 @@ class _MansionShellState extends State<MansionShell> {
   void initState() {
     super.initState();
     _checkForUpdates();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingInvite());
+  }
+
+  Future<void> _checkPendingInvite() async {
+    final code = widget.store.pendingInviteCode;
+    if (!mounted || code == null) return;
+    widget.store.clearPendingInviteCode();
+    await showAcceptInviteDialog(context, widget.store, initialCodeOrLink: code);
   }
 
   Future<void> _checkForUpdates() async {
@@ -1931,6 +1964,43 @@ Future<void> _showGangSheet(
                   Text(
                     'Zvací kód pro členy Gangu: ${gang.inviteCode}',
                     style: const TextStyle(color: Color(0xFFC6A15B)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => MyGangsPage(store: store),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.groups_outlined),
+                          label: const Text('Moje Gangy'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ManageGangPage(
+                                  store: store,
+                                  gangId: gang.id,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text('Pozvat / Správa'),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   const Text(

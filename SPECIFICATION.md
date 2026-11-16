@@ -15,10 +15,12 @@ Dobrodružství začíná při prvním spuštění aplikace:
      1. *Otevři Knihu (Deck) a zahraj kartu splněného úkolu.*
      2. *Sbírej Coiny do svého Banku a drž si vysoký Level i žhnoucí Heat.*
      3. *Požádej Ruku o směnu Banku na reálné peníze a ovládni měsíční Leaderboard.*
-2. **Založení nebo připojení do Gangu (Rodiny / Sídla):**
-   - **Zakladatel = Ruka (Správce sídla):** Zakládající člen vytvoří nový Gang/Sídlo, zvolí mu název a získá krátký **zvací kód** (např. `GRIM-42` + možnost sdílení odkazu), kterým pozve ostatní členy domácnosti.
+2. **Založení, správa a připojení do Gangu (Rodiny / Sídla):**
+   - **Zakladatel = Ruka (Správce sídla):** Každý přihlášený uživatel může založit vlastní Gang/Sídlo, zvolit mu název, svou přezdívku a **pohlaví** (*Muž / Žena / Neutrální* pro správné skloňování v kronice) a získá krátký **zvací kód** (např. `GRIM-42`) i sdílený **IM odkaz** (`https://grim-grind.web.app/join?code=GRIM-42`).
+   - **Sdílení pozvánky a instalace aplikace:** Otevření zvacího odkazu v mobilu přesměruje uživatele přímo do aplikace na obrazovku přijetí pozvánky (App Links / Universal Links), nebo při chybějící aplikaci zobrazí webovou stránku s instalací (APK / Firebase App Distribution) a zvacím kódem.
+   - **Přijetí pozvánky:** Při přijetí pozvánky si nový člen zvolí vlastní **nickname** a **pohlaví** (*Muž / Žena / Neutrální*).
+   - **Více Gangů & Správa („Moje Gangy“):** Většina hráčů je v jednom rodinném Gangu, ale uživatel může být členem více Gangů najednou, přepínat mezi nimi v sekci **Moje Gangy**, obnovovat zvací kód (jako vlastník) a jako vlastník Gang smazat (vyžaduje nebezpečné potvrzení zadáním přesného názvu Gangu). Opuštění Gangu členem momentálně není podporováno.
    - **Pravomoci Ruky:** Zakladatel má roli **Ruky** – nastavuje směnný kurz (`Coin → Kč`) a schvaluje žádosti o směnu Banku ostatním členům. Zároveň může sám běžně hrát karty a účastnit se Leaderboardů.
-   - **Členové Gangu:** Ostatní hráči při prvním spuštění zadají zvací kód sídla a zvolí si svůj temný **nickname** (např. *Dark Lord*, *Shadow Master*, *Královna sídla*).
 
 ---
 
