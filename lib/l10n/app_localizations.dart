@@ -470,17 +470,17 @@ abstract class AppLocalizations {
   /// **'e.g. GRIM-42'**
   String get inviteCodeExampleHint;
 
-  /// No description provided for @feedEmptyTitle.
+  /// No description provided for @chronicleEmptyTitle.
   ///
   /// In en, this message translates to:
   /// **'The Chronicle is Silent'**
-  String get feedEmptyTitle;
+  String get chronicleEmptyTitle;
 
-  /// No description provided for @feedEmptyText.
+  /// No description provided for @chronicleEmptyText.
   ///
   /// In en, this message translates to:
   /// **'No cards played yet. The cobwebs await the first entry.'**
-  String get feedEmptyText;
+  String get chronicleEmptyText;
 
   /// No description provided for @deckEyebrow.
   ///
@@ -1202,51 +1202,51 @@ abstract class AppLocalizations {
   /// **'PERIOD CLOSING • {monthKey}'**
   String periodClosingBanner(String monthKey);
 
-  /// No description provided for @feedCardPlayedLine.
+  /// No description provided for @chronicleCardPlayedLine.
   ///
   /// In en, this message translates to:
   /// **'{actor} played \"{choreName}\" and stored {coins} Coins in the Pouch.'**
-  String feedCardPlayedLine(String actor, String choreName, int coins);
+  String chronicleCardPlayedLine(String actor, String choreName, int coins);
 
-  /// No description provided for @feedExchangeMessage.
+  /// No description provided for @chronicleExchangeMessage.
   ///
   /// In en, this message translates to:
   /// **'{actor} exchanged {cardCount} cards for {coins} Coins{czkPart}.'**
-  String feedExchangeMessage(
+  String chronicleExchangeMessage(
     String actor,
     int cardCount,
     int coins,
     String czkPart,
   );
 
-  /// No description provided for @feedMonthTitle.
+  /// No description provided for @chronicleMonthTitle.
   ///
   /// In en, this message translates to:
   /// **'Monthly Proclamation • {monthKey}'**
-  String feedMonthTitle(String monthKey);
+  String chronicleMonthTitle(String monthKey);
 
-  /// No description provided for @feedMonthClosedNoWinner.
+  /// No description provided for @chronicleMonthClosedNoWinner.
   ///
   /// In en, this message translates to:
   /// **'Month {monthKey} has closed. Monthly levels reset to Awakened for the new month.'**
-  String feedMonthClosedNoWinner(String monthKey);
+  String chronicleMonthClosedNoWinner(String monthKey);
 
-  /// No description provided for @feedMonthClosedWinner.
+  /// No description provided for @chronicleMonthClosedWinner.
   ///
   /// In en, this message translates to:
   /// **'{winner} became Ruler of {monthKey} ({coins} Coins, {cardCount} chores).'**
-  String feedMonthClosedWinner(
+  String chronicleMonthClosedWinner(
     String winner,
     String monthKey,
     int coins,
     int cardCount,
   );
 
-  /// No description provided for @feedMonthClosedWinnerNoCount.
+  /// No description provided for @chronicleMonthClosedWinnerNoCount.
   ///
   /// In en, this message translates to:
   /// **'{winner} became Ruler of {monthKey} ({coins} Coins).'**
-  String feedMonthClosedWinnerNoCount(
+  String chronicleMonthClosedWinnerNoCount(
     String winner,
     String monthKey,
     int coins,
@@ -1639,7 +1639,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorGoogleSignInCancelled.
   ///
   /// In en, this message translates to:
-  /// **'Google sign-in was cancelled or failed.'**
+  /// **'User canceled'**
   String get errorGoogleSignInCancelled;
 
   /// No description provided for @errorGoogleSignInFailed.
@@ -1713,6 +1713,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error joining Mansion: {error}'**
   String errorJoinMansionException(String error);
+
+  /// No description provided for @welcomeToMansionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to the mansion'**
+  String get welcomeToMansionTitle;
+
+  /// No description provided for @welcomeToMansionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have joined \"{name}\". Everything is set up and ready.'**
+  String welcomeToMansionBody(String name);
+
+  /// No description provided for @welcomeToMansionConfirmBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter'**
+  String get welcomeToMansionConfirmBtn;
 }
 
 class _AppLocalizationsDelegate

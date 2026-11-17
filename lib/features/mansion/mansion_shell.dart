@@ -28,19 +28,84 @@ class _MansionShellState extends State<MansionShell> {
       widget.updateService ?? DistributionUpdateService();
   UpdateCheckResult? _pendingUpdate;
   bool _updateDismissed = false;
+  bool _isHandlingPendingEvents = false;
 
   @override
   void initState() {
     super.initState();
+    widget.store.addListener(_onStoreChanged);
     _checkForUpdates();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingInvite());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingEvents());
   }
 
-  Future<void> _checkPendingInvite() async {
-    final code = widget.store.pendingInviteCode;
-    if (!mounted || code == null) return;
-    widget.store.clearPendingInviteCode();
-    await showAcceptInviteDialog(context, widget.store, initialCodeOrLink: code);
+  @override
+  void didUpdateWidget(covariant MansionShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) {
+      oldWidget.store.removeListener(_onStoreChanged);
+      widget.store.addListener(_onStoreChanged);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingEvents());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_onStoreChanged);
+    super.dispose();
+  }
+
+  void _onStoreChanged() {
+    if (!mounted) return;
+    if (widget.store.pendingWelcomeMansionName != null ||
+        widget.store.pendingInviteCode != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkPendingEvents());
+    }
+  }
+
+  Future<void> _checkPendingEvents() async {
+    if (!mounted || _isHandlingPendingEvents) return;
+    _isHandlingPendingEvents = true;
+    try {
+      final welcomeName = widget.store.consumePendingWelcomeMansionName();
+      if (welcomeName != null && mounted) {
+        await _showWelcomeDialog(welcomeName);
+      }
+
+      final code = widget.store.pendingInviteCode;
+      if (mounted && code != null) {
+        widget.store.clearPendingInviteCode();
+        await showAcceptInviteDialog(
+          context,
+          widget.store,
+          initialCodeOrLink: code,
+        );
+      }
+    } finally {
+      _isHandlingPendingEvents = false;
+    }
+  }
+
+  Future<void> _showWelcomeDialog(String mansionName) async {
+    final s = AppStrings.of(context);
+    final theme = ThemeScope.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.castle_outlined, color: theme.primaryAccent, size: 36),
+        title: Text(s.welcomeToMansionTitle, textAlign: TextAlign.center),
+        content: Text(
+          s.welcomeToMansionBody(mansionName),
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(s.welcomeToMansionConfirmBtn),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _checkForUpdates() async {

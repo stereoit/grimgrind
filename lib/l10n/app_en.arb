@@ -69,8 +69,8 @@
   "starterFamilySubtitle": "Ideal for trying out the Leaderboard and exchange approvals right away",
   "mansionInviteCodeLabel": "Mansion Invite Code",
   "inviteCodeExampleHint": "e.g. GRIM-42",
-  "feedEmptyTitle": "The Chronicle is Silent",
-  "feedEmptyText": "No cards played yet. The cobwebs await the first entry.",
+  "chronicleEmptyTitle": "The Chronicle is Silent",
+  "chronicleEmptyText": "No cards played yet. The cobwebs await the first entry.",
   "deckEyebrow": "MANSION BOOK OF CARDS",
   "deckHeading": "Choose a completed card",
   "deckBonusSummary": "Level {levelLabel} (+{levelPct}%) • {heatLabel} (+{heatPct}%) = +{totalPct}% total Coins.",
@@ -327,8 +327,8 @@
       }
     }
   },
-  "feedCardPlayedLine": "{actor} played \"{choreName}\" and stored {coins} Coins in the Pouch.",
-  "@feedCardPlayedLine": {
+  "chronicleCardPlayedLine": "{actor} played \"{choreName}\" and stored {coins} Coins in the Pouch.",
+  "@chronicleCardPlayedLine": {
     "placeholders": {
       "actor": {
         "type": "String"
@@ -341,8 +341,8 @@
       }
     }
   },
-  "feedExchangeMessage": "{actor} exchanged {cardCount} cards for {coins} Coins{czkPart}.",
-  "@feedExchangeMessage": {
+  "chronicleExchangeMessage": "{actor} exchanged {cardCount} cards for {coins} Coins{czkPart}.",
+  "@chronicleExchangeMessage": {
     "placeholders": {
       "actor": {
         "type": "String"
@@ -358,24 +358,24 @@
       }
     }
   },
-  "feedMonthTitle": "Monthly Proclamation • {monthKey}",
-  "@feedMonthTitle": {
+  "chronicleMonthTitle": "Monthly Proclamation • {monthKey}",
+  "@chronicleMonthTitle": {
     "placeholders": {
       "monthKey": {
         "type": "String"
       }
     }
   },
-  "feedMonthClosedNoWinner": "Month {monthKey} has closed. Monthly levels reset to Awakened for the new month.",
-  "@feedMonthClosedNoWinner": {
+  "chronicleMonthClosedNoWinner": "Month {monthKey} has closed. Monthly levels reset to Awakened for the new month.",
+  "@chronicleMonthClosedNoWinner": {
     "placeholders": {
       "monthKey": {
         "type": "String"
       }
     }
   },
-  "feedMonthClosedWinner": "{winner} became Ruler of {monthKey} ({coins} Coins, {cardCount} chores).",
-  "@feedMonthClosedWinner": {
+  "chronicleMonthClosedWinner": "{winner} became Ruler of {monthKey} ({coins} Coins, {cardCount} chores).",
+  "@chronicleMonthClosedWinner": {
     "placeholders": {
       "winner": {
         "type": "String"
@@ -391,8 +391,8 @@
       }
     }
   },
-  "feedMonthClosedWinnerNoCount": "{winner} became Ruler of {monthKey} ({coins} Coins).",
-  "@feedMonthClosedWinnerNoCount": {
+  "chronicleMonthClosedWinnerNoCount": "{winner} became Ruler of {monthKey} ({coins} Coins).",
+  "@chronicleMonthClosedWinnerNoCount": {
     "placeholders": {
       "winner": {
         "type": "String"
@@ -606,5 +606,15 @@
         "type": "String"
       }
     }
-  }
+  },
+  "welcomeToMansionTitle": "Welcome to the mansion",
+  "welcomeToMansionBody": "You have joined \"{name}\". Everything is set up and ready.",
+  "@welcomeToMansionBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeToMansionConfirmBtn": "Enter"
 }

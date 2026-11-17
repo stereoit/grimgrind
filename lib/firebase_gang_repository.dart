@@ -330,4 +330,223 @@ class FirebaseGangRepository {
         .get();
     return snap.docs.map((d) => d.id).toList();
   }
+
+  Stream<List<Map<String, dynamic>>> watchGangMembers(String gangId) {
+    if (!isFirebaseReady) return const Stream.empty();
+    return _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('members')
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> watchPlayedCards(String gangId) {
+    if (!isFirebaseReady) return const Stream.empty();
+    return _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('played_cards')
+        .orderBy('playedAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> watchExchanges(String gangId) {
+    if (!isFirebaseReady) return const Stream.empty();
+    return _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('exchanges')
+        .orderBy('requestedAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  Stream<List<Map<String, dynamic>>> watchChronicle(String gangId) {
+    if (!isFirebaseReady) return const Stream.empty();
+    return _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('chronicle')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList());
+  }
+
+  Future<void> recordPlayedCard({
+    required String gangId,
+    required PlayedCard card,
+    required MemberSex memberSex,
+    required int heatPeakDays,
+    required DateTime? lastActiveDay,
+    required ChronicleEntry chronicleEntry,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+
+    final gangRef = _db.collection('gangs').doc(gangId);
+    final batch = _db.batch();
+
+    batch.set(gangRef.collection('played_cards').doc(card.id), {
+      'choreId': card.chore.id,
+      'choreTitle': card.chore.title,
+      'choreSymbol': card.chore.symbol,
+      'choreBaseCoins': card.chore.baseCoins,
+      'choreDifficulty': card.chore.difficulty.name,
+      'choreMinutes': card.chore.minutes,
+      'memberId': card.memberId,
+      'memberNickname': card.memberNickname,
+      'memberSex': memberSex.name,
+      'coinsAwarded': card.coinsAwarded,
+      'playedAt': Timestamp.fromDate(card.playedAt),
+      'monthKey': card.monthKey,
+      'levelAtPlay': card.levelAtPlay.name,
+      'heatAtPlay': card.heatAtPlay.name,
+      'status': card.status.name,
+    });
+
+    batch.set(
+      gangRef.collection('members').doc(card.memberId),
+      {
+        'heatPeakDays': heatPeakDays,
+        if (lastActiveDay != null)
+          'lastActiveDay': Timestamp.fromDate(lastActiveDay),
+      },
+      SetOptions(merge: true),
+    );
+
+    await batch.commit();
+
+    try {
+      await _writeChronicleDoc(gangId: gangId, entry: chronicleEntry);
+    } catch (_) {
+      // Ignore if rules/functions handle chronicle separately.
+    }
+  }
+
+  Future<void> createExchangeRequest({
+    required String gangId,
+    required ExchangeRequest request,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+
+    final gangRef = _db.collection('gangs').doc(gangId);
+    final batch = _db.batch();
+
+    batch.set(gangRef.collection('exchanges').doc(request.id), {
+      'memberId': request.memberId,
+      'memberNickname': request.memberNickname,
+      'cardIds': request.cardIds,
+      'totalCoins': request.totalCoins,
+      'coinsPerCzk': request.coinsPerCzk,
+      'requestedAt': Timestamp.fromDate(request.requestedAt),
+      'monthKey': request.monthKey,
+      'isAutoMonthEnd': request.isAutoMonthEnd,
+      'status': request.status.name,
+    });
+
+    for (final cardId in request.cardIds) {
+      batch.update(gangRef.collection('played_cards').doc(cardId), {
+        'status': PlayedCardStatus.pendingExchange.name,
+        'exchangeId': request.id,
+      });
+    }
+
+    await batch.commit();
+  }
+
+  Future<void> rejectCardInExchange({
+    required String gangId,
+    required String cardId,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+
+    await _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('played_cards')
+        .doc(cardId)
+        .update({'status': PlayedCardStatus.rejected.name});
+  }
+
+  Future<void> approveExchange({
+    required String gangId,
+    required ExchangeRequest request,
+    required List<String> approvedCardIds,
+    required ChronicleEntry chronicleEntry,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+
+    final gangRef = _db.collection('gangs').doc(gangId);
+    final batch = _db.batch();
+    final approvedAt = request.approvedAt ?? DateTime.now();
+
+    batch.update(gangRef.collection('exchanges').doc(request.id), {
+      'status': ExchangeStatus.approved.name,
+      'approvedAt': Timestamp.fromDate(approvedAt),
+      'approvedByNickname': request.approvedByNickname,
+      'totalCoins': request.totalCoins,
+    });
+
+    for (final cardId in approvedCardIds) {
+      batch.update(gangRef.collection('played_cards').doc(cardId), {
+        'status': PlayedCardStatus.exchanged.name,
+        'exchangedAt': Timestamp.fromDate(approvedAt),
+      });
+    }
+
+    await batch.commit();
+
+    try {
+      await _writeChronicleDoc(gangId: gangId, entry: chronicleEntry);
+    } catch (_) {
+      // Ignore if rules/functions handle chronicle separately.
+    }
+  }
+
+  Future<void> addChronicleEntry({
+    required String gangId,
+    required ChronicleEntry entry,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+    try {
+      await _writeChronicleDoc(gangId: gangId, entry: entry);
+    } catch (_) {
+      // Ignore if rules disallow client chronicle writes.
+    }
+  }
+
+  Future<void> _writeChronicleDoc({
+    required String gangId,
+    required ChronicleEntry entry,
+  }) {
+    return _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('chronicle')
+        .doc(entry.id)
+        .set({
+          'type': entry.type.name,
+          'actorNickname': entry.actorNickname,
+          'title': entry.title,
+          'message': entry.message,
+          'createdAt': Timestamp.fromDate(entry.createdAt),
+          'monthKey': entry.monthKey,
+          if (entry.choreId != null) 'choreId': entry.choreId,
+          if (entry.symbol != null) 'symbol': entry.symbol,
+          if (entry.coins != null) 'coins': entry.coins,
+          if (entry.czkAmount != null) 'czkAmount': entry.czkAmount,
+          if (entry.cardCount != null) 'cardCount': entry.cardCount,
+          if (entry.winnerNickname != null)
+            'winnerNickname': entry.winnerNickname,
+          if (entry.levelAtEvent != null)
+            'levelAtEvent': entry.levelAtEvent!.name,
+          if (entry.heatAtEvent != null) 'heatAtEvent': entry.heatAtEvent!.name,
+        }, SetOptions(merge: true));
+  }
 }

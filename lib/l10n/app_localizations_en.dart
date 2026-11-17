@@ -205,10 +205,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inviteCodeExampleHint => 'e.g. GRIM-42';
 
   @override
-  String get feedEmptyTitle => 'The Chronicle is Silent';
+  String get chronicleEmptyTitle => 'The Chronicle is Silent';
 
   @override
-  String get feedEmptyText =>
+  String get chronicleEmptyText =>
       'No cards played yet. The cobwebs await the first entry.';
 
   @override
@@ -613,12 +613,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String feedCardPlayedLine(String actor, String choreName, int coins) {
+  String chronicleCardPlayedLine(String actor, String choreName, int coins) {
     return '$actor played \"$choreName\" and stored $coins Coins in the Pouch.';
   }
 
   @override
-  String feedExchangeMessage(
+  String chronicleExchangeMessage(
     String actor,
     int cardCount,
     int coins,
@@ -628,17 +628,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String feedMonthTitle(String monthKey) {
+  String chronicleMonthTitle(String monthKey) {
     return 'Monthly Proclamation • $monthKey';
   }
 
   @override
-  String feedMonthClosedNoWinner(String monthKey) {
+  String chronicleMonthClosedNoWinner(String monthKey) {
     return 'Month $monthKey has closed. Monthly levels reset to Awakened for the new month.';
   }
 
   @override
-  String feedMonthClosedWinner(
+  String chronicleMonthClosedWinner(
     String winner,
     String monthKey,
     int coins,
@@ -648,7 +648,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String feedMonthClosedWinnerNoCount(
+  String chronicleMonthClosedWinnerNoCount(
     String winner,
     String monthKey,
     int coins,
@@ -928,4 +928,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorJoinMansionException(String error) {
     return 'Error joining Mansion: $error';
   }
+
+  @override
+  String get welcomeToMansionTitle => 'Welcome to the mansion';
+
+  @override
+  String welcomeToMansionBody(String name) {
+    return 'You have joined \"$name\". Everything is set up and ready.';
+  }
+
+  @override
+  String get welcomeToMansionConfirmBtn => 'Enter';
 }

@@ -43,16 +43,16 @@ void main() {
       );
 
       store.playCard(store.deck.first);
-      expect(store.feedEntries.first.message, contains('zahrála'));
-      expect(store.feedEntries.first.message, contains('uložila'));
+      expect(store.chronicleEntries.first.message, contains('zahrála'));
+      expect(store.chronicleEntries.first.message, contains('uložila'));
 
       final req = store.requestExchange()!;
       store.approveExchange(req.id);
-      expect(store.feedEntries.first.message, contains('směnila'));
+      expect(store.chronicleEntries.first.message, contains('směnila'));
 
       store.closeMonth();
-      expect(store.feedEntries.first.message, contains('Vládkyní'));
-      expect(store.feedEntries.first.message, contains('se stala'));
+      expect(store.chronicleEntries.first.message, contains('Vládkyní'));
+      expect(store.chronicleEntries.first.message, contains('se stala'));
     });
 
     test('parseInviteCodeFromUri supports HTTPS query, HTTPS path, and custom scheme', () {
@@ -335,5 +335,66 @@ void main() {
       expect(store.isSignedIn, isFalse);
       expect(find.text('Log Out'), findsNothing);
     });
+
+    testWidgets(
+      'logged-in user with no mansion clicking invite link auto-joins and sees Welcome to the mansion',
+      (tester) async {
+        tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
+        final store = MansionStore(clock: () => DateTime(2026, 8, 10, 12, 0));
+        store.isSignedIn = true;
+        store.authUserEmail = 'wednesday@addams.local';
+        store.hasSeenIntro = true;
+
+        await tester.pumpWidget(GrimGrindApp(store: store, showSplash: false));
+        await tester.pumpAndSettle();
+
+        expect(store.isReady, isFalse);
+
+        // Simulate OS delivering an invite link while the app is open.
+        await tester.binding.handlePushRoute('/join?code=GRIM-77');
+        await tester.pumpAndSettle();
+
+        expect(store.isReady, isTrue);
+        expect(store.gang!.inviteCode, 'GRIM-77');
+        expect(store.currentMember!.nickname, 'wednesday');
+        expect(find.text('Welcome to the mansion'), findsOneWidget);
+        expect(
+          find.textContaining('Everything is set up and ready.'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Enter'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Welcome to the mansion'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'cold start with invite link for logged-in user with no mansion shows Welcome to the mansion',
+      (tester) async {
+        tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
+        final store = MansionStore(clock: () => DateTime(2026, 8, 10, 12, 0));
+        store.isSignedIn = true;
+        store.authUserEmail = 'pugsley@addams.local';
+        store.setPendingInviteCode('GRIM-88');
+
+        await tester.pumpWidget(GrimGrindApp(store: store, showSplash: false));
+        await tester.pumpAndSettle();
+
+        expect(store.isReady, isTrue);
+        expect(store.gang!.inviteCode, 'GRIM-88');
+        expect(find.text('Welcome to the mansion'), findsOneWidget);
+
+        await tester.tap(find.text('Enter'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Welcome to the mansion'), findsNothing);
+      },
+    );
   });
 }

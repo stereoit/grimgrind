@@ -27,16 +27,19 @@ exports.notifyPlayedCard = onDocumentCreated(
     const db = getFirestore();
     const verbs = verbsForSex(data.memberSex);
 
-    await db.collection(`gangs/${gangId}/feed`).add({
+    await db.collection(`gangs/${gangId}/chronicle`).doc(`card_${event.params.cardId}`).set({
       type: "cardPlayed",
       actorNickname: data.memberNickname,
       title: data.choreTitle,
       message: `${verbs.played} kartu „${data.choreTitle}“ a ${verbs.stored} ${data.coinsAwarded} Coinů do Banku.`,
       choreId: data.choreId,
+      symbol: data.choreSymbol || null,
       coins: data.coinsAwarded,
       monthKey: data.monthKey,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+      levelAtEvent: data.levelAtPlay || null,
+      heatAtEvent: data.heatAtPlay || null,
+      createdAt: data.playedAt || FieldValue.serverTimestamp(),
+    }, {merge: true});
 
     await getMessaging().send({
       topic: `gang_${gangId}`,
@@ -60,17 +63,21 @@ exports.recordApprovedExchange = onDocumentUpdated(
     const czk = Math.round(after.totalCoins / (after.coinsPerCzk || 10));
     const verbs = verbsForSex(after.memberSex);
 
-    await getFirestore().collection(`gangs/${gangId}/feed`).add({
-      type: "exchangeApproved",
-      actorNickname: after.memberNickname,
-      title: "Směna schválena Rukou",
-      message: `${after.memberNickname} ${verbs.exchanged} ${after.cardIds.length} karet za ${after.totalCoins} Coinů (${czk} Kč).`,
-      coins: after.totalCoins,
-      czkAmount: czk,
-      cardCount: after.cardIds.length,
-      monthKey: after.monthKey,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+    await getFirestore()
+      .collection(`gangs/${gangId}/chronicle`)
+      .doc(`exchange_${event.params.exchangeId}`)
+      .set({
+        type: "exchangeApproved",
+        actorNickname: after.memberNickname,
+        title: "Směna schválena Rukou",
+        message: `${after.memberNickname} ${verbs.exchanged} ${after.cardIds.length} karet za ${after.totalCoins} Coinů (${czk} Kč).`,
+        symbol: "☞",
+        coins: after.totalCoins,
+        czkAmount: czk,
+        cardCount: after.cardIds.length,
+        monthKey: after.monthKey,
+        createdAt: after.approvedAt || FieldValue.serverTimestamp(),
+      }, {merge: true});
   },
 );
 
@@ -90,7 +97,7 @@ exports.onGangDeleted = onDocumentDeleted(
       await db.collection(`users/${memberDoc.id}/gangs`).doc(gangId).delete();
     }
 
-    const subcollections = ["members", "played_cards", "exchanges", "feed"];
+    const subcollections = ["members", "played_cards", "exchanges", "chronicle"];
     for (const sub of subcollections) {
       const snap = await db.collection(`gangs/${gangId}/${sub}`).get();
       if (snap.empty) continue;

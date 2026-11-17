@@ -49,9 +49,9 @@ service cloud.firestore {
           && request.resource.data.status == 'approved';
       }
 
-      match /feed/{entryId} {
-        allow read: if isGangMember(gangId);
-        allow write: if false;
+      match /chronicle/{entryId} {
+        allow read, create: if isGangMember(gangId);
+        allow update, delete: if false;
       }
     }
 

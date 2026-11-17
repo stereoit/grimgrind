@@ -20,7 +20,7 @@ class ChroniclePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
-    final entries = store.feedEntries;
+    final entries = store.chronicleEntries;
 
     return CustomScrollView(
       key: const PageStorageKey('chronicle'),
@@ -31,8 +31,8 @@ class ChroniclePage extends StatelessWidget {
             child: EmptyState(
               icon: Icons.dynamic_feed_outlined,
               imageAsset: 'assets/branding/chronicle_empty.png',
-              title: s.feedEmptyTitle,
-              text: s.feedEmptyText,
+              title: s.chronicleEmptyTitle,
+              text: s.chronicleEmptyText,
             ),
           )
         else
@@ -44,13 +44,12 @@ class ChroniclePage extends StatelessWidget {
               itemBuilder: (context, i) {
                 final entry = entries[i];
                 return switch (entry.type) {
-                  FeedEntryType.cardPlayed => _ChroniclePlayedCardPost(
+                  ChronicleEntryType.cardPlayed => _ChroniclePlayedCardPost(
                     entry: entry,
                   ),
-                  FeedEntryType.exchangeApproved => _ChronicleExchangePost(
-                    entry: entry,
-                  ),
-                  FeedEntryType.monthProclamation =>
+                  ChronicleEntryType.exchangeApproved =>
+                    _ChronicleExchangePost(entry: entry),
+                  ChronicleEntryType.monthProclamation =>
                     _ChronicleMonthDividerCard(entry: entry),
                 };
               },
@@ -64,7 +63,7 @@ class ChroniclePage extends StatelessWidget {
 class _ChroniclePlayedCardPost extends StatelessWidget {
   const _ChroniclePlayedCardPost({required this.entry});
 
-  final FeedEntry entry;
+  final ChronicleEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +156,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        s.feedCardPlayedTitle(entry),
+                        s.chronicleCardPlayedTitle(entry),
                         style: const TextStyle(
                           fontSize: 22,
                           color: Color(0xFFE9E0D0),
@@ -171,7 +170,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
             child: Text(
-              s.feedCardPlayedLine(entry),
+              s.chronicleCardPlayedLine(entry),
               style: const TextStyle(color: Color(0xFFD5CCB8), height: 1.4),
             ),
           ),
@@ -184,7 +183,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
 class _ChronicleExchangePost extends StatelessWidget {
   const _ChronicleExchangePost({required this.entry});
 
-  final FeedEntry entry;
+  final ChronicleEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -242,7 +241,7 @@ class _ChronicleExchangePost extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  s.feedExchangeMessage(entry),
+                  s.chronicleExchangeMessage(entry),
                   style: const TextStyle(height: 1.4),
                 ),
                 const SizedBox(height: 6),
@@ -267,7 +266,7 @@ class _ChronicleExchangePost extends StatelessWidget {
 class _ChronicleMonthDividerCard extends StatelessWidget {
   const _ChronicleMonthDividerCard({required this.entry});
 
-  final FeedEntry entry;
+  final ChronicleEntry entry;
 
   @override
   Widget build(BuildContext context) {
@@ -323,7 +322,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
                       right: 16,
                       bottom: 12,
                       child: Text(
-                        s.feedMonthTitle(entry),
+                        s.chronicleMonthTitle(entry),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 20,
@@ -337,7 +336,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(
-                  s.feedMonthMessage(entry),
+                  s.chronicleMonthMessage(entry),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.4),
                 ),

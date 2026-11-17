@@ -177,10 +177,10 @@ class ExchangeRequest {
   int get czkAmount => (totalCoins / coinsPerCzk).round();
 }
 
-enum FeedEntryType { cardPlayed, exchangeApproved, monthProclamation }
+enum ChronicleEntryType { cardPlayed, exchangeApproved, monthProclamation }
 
-class FeedEntry {
-  const FeedEntry({
+class ChronicleEntry {
+  const ChronicleEntry({
     required this.id,
     required this.type,
     required this.actorNickname,
@@ -199,7 +199,7 @@ class FeedEntry {
   });
 
   final String id;
-  final FeedEntryType type;
+  final ChronicleEntryType type;
   final String actorNickname;
   final String title;
   final String message;
@@ -215,7 +215,7 @@ class FeedEntry {
   final HeatLevel? heatAtEvent;
 }
 
-/// Grammatical sex/gender used for localized wording in Feed & notifications.
+/// Grammatical sex/gender used for localized wording in Chronicle & notifications.
 enum MemberSex { male, female, neutral }
 
 extension MemberSexData on MemberSex {

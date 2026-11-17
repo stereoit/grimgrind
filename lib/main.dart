@@ -40,20 +40,45 @@ class GrimGrindApp extends StatefulWidget {
   State<GrimGrindApp> createState() => _GrimGrindAppState();
 }
 
-class _GrimGrindAppState extends State<GrimGrindApp> {
+class _GrimGrindAppState extends State<GrimGrindApp> with WidgetsBindingObserver {
   late final MansionStore store = widget.store ?? MansionStore();
-  late bool _showingSplash = widget.showSplash ?? (widget.store == null);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final initialUri = Uri.tryParse(
+      WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+    );
+    if (initialUri != null) {
+      _handleIncomingUri(initialUri);
+    }
     if (widget.store == null) {
       store.syncFromFirebase();
+    } else if (store.pendingInviteCode != null) {
+      store.acceptPendingInviteIfEligible();
     }
+  }
+
+  bool _handleIncomingUri(Uri uri) {
+    final code = MansionStore.parseInviteCodeFromUri(uri);
+    if (code == null || code.isEmpty) return false;
+    store.setPendingInviteCode(code);
+    store.acceptPendingInviteIfEligible();
+    return true;
+  }
+
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation routeInformation) async {
+    if (_handleIncomingUri(routeInformation.uri)) {
+      return true;
+    }
+    return super.didPushRouteInformation(routeInformation);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (widget.store == null) store.dispose();
     super.dispose();
   }
@@ -80,22 +105,71 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            home: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              child: _showingSplash
-                  ? SplashScreen(
-                      key: const ValueKey('splash'),
-                      onFinished: () => setState(() => _showingSplash = false),
-                    )
-                  : !store.isReady
-                      ? OnboardingFlow(key: const ValueKey('onboarding'), store: store)
-                      : MansionShell(
-                          key: const ValueKey('shell'),
-                          store: store,
-                          updateService: widget.updateService,
-                        ),
+            onGenerateInitialRoutes: (_) => [
+              MaterialPageRoute<void>(
+                settings: const RouteSettings(name: '/'),
+                builder: (_) => _GrimGrindHome(
+                  store: store,
+                  updateService: widget.updateService,
+                  showSplash: widget.showSplash ?? (widget.store == null),
+                ),
+              ),
+            ],
+            onGenerateRoute: (settings) => MaterialPageRoute<void>(
+              settings: settings,
+              builder: (_) => _GrimGrindHome(
+                store: store,
+                updateService: widget.updateService,
+                showSplash: false,
+              ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _GrimGrindHome extends StatefulWidget {
+  const _GrimGrindHome({
+    required this.store,
+    required this.showSplash,
+    this.updateService,
+  });
+
+  final MansionStore store;
+  final DistributionUpdateService? updateService;
+  final bool showSplash;
+
+  @override
+  State<_GrimGrindHome> createState() => _GrimGrindHomeState();
+}
+
+class _GrimGrindHomeState extends State<_GrimGrindHome> {
+  late bool _showingSplash = widget.showSplash;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.store,
+      builder: (context, _) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          child: _showingSplash
+              ? SplashScreen(
+                  key: const ValueKey('splash'),
+                  onFinished: () => setState(() => _showingSplash = false),
+                )
+              : !widget.store.isReady
+                  ? OnboardingFlow(
+                      key: const ValueKey('onboarding'),
+                      store: widget.store,
+                    )
+                  : MansionShell(
+                      key: const ValueKey('shell'),
+                      store: widget.store,
+                      updateService: widget.updateService,
+                    ),
         );
       },
     );

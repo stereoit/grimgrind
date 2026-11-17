@@ -125,8 +125,8 @@ class AppStrings {
   String get inviteCodeExampleHint => l10n.inviteCodeExampleHint;
 
   // Feed / Chronicle
-  String get feedEmptyTitle => l10n.feedEmptyTitle;
-  String get feedEmptyText => l10n.feedEmptyText;
+  String get chronicleEmptyTitle => l10n.chronicleEmptyTitle;
+  String get chronicleEmptyText => l10n.chronicleEmptyText;
 
   // Deck & Play Card
   String get deckEyebrow => l10n.deckEyebrow;
@@ -316,27 +316,27 @@ class AppStrings {
   String periodClosingBanner(String monthKey) =>
       l10n.periodClosingBanner(monthKey);
 
-  String feedCardPlayedTitle(FeedEntry entry) =>
+  String chronicleCardPlayedTitle(ChronicleEntry entry) =>
       choreTitleById(entry.choreId, fallback: entry.title);
 
-  String feedCardPlayedLine(FeedEntry entry) {
+  String chronicleCardPlayedLine(ChronicleEntry entry) {
     if (entry.coins == null) {
       return '${entry.actorNickname} ${entry.message}';
     }
     final choreName = choreTitleById(entry.choreId, fallback: entry.title);
-    return l10n.feedCardPlayedLine(
+    return l10n.chronicleCardPlayedLine(
       entry.actorNickname,
       choreName,
       entry.coins!,
     );
   }
 
-  String feedExchangeMessage(FeedEntry entry) {
+  String chronicleExchangeMessage(ChronicleEntry entry) {
     if (entry.cardCount == null || entry.coins == null) {
       return entry.message;
     }
     final czkPart = entry.czkAmount != null ? ' (${entry.czkAmount} CZK)' : '';
-    return l10n.feedExchangeMessage(
+    return l10n.chronicleExchangeMessage(
       entry.actorNickname,
       entry.cardCount!,
       entry.coins!,
@@ -344,20 +344,21 @@ class AppStrings {
     );
   }
 
-  String feedMonthTitle(FeedEntry entry) => l10n.feedMonthTitle(entry.monthKey);
+  String chronicleMonthTitle(ChronicleEntry entry) =>
+      l10n.chronicleMonthTitle(entry.monthKey);
 
-  String feedMonthMessage(FeedEntry entry) {
+  String chronicleMonthMessage(ChronicleEntry entry) {
     if (entry.winnerNickname == null) {
-      return l10n.feedMonthClosedNoWinner(entry.monthKey);
+      return l10n.chronicleMonthClosedNoWinner(entry.monthKey);
     }
     if (entry.cardCount == null) {
-      return l10n.feedMonthClosedWinnerNoCount(
+      return l10n.chronicleMonthClosedWinnerNoCount(
         entry.winnerNickname!,
         entry.monthKey,
         entry.coins ?? 0,
       );
     }
-    return l10n.feedMonthClosedWinner(
+    return l10n.chronicleMonthClosedWinner(
       entry.winnerNickname!,
       entry.monthKey,
       entry.coins ?? 0,
@@ -378,6 +379,9 @@ class AppStrings {
   String get joiningBtn => l10n.joiningBtn;
   String get joinBtn => l10n.joinBtn;
   String get invalidInviteCodeError => l10n.invalidInviteCodeError;
+  String get welcomeToMansionTitle => l10n.welcomeToMansionTitle;
+  String welcomeToMansionBody(String name) => l10n.welcomeToMansionBody(name);
+  String get welcomeToMansionConfirmBtn => l10n.welcomeToMansionConfirmBtn;
 
   String get createMansionCharterEyebrow => l10n.createMansionCharterEyebrow;
   String get createNewMansionTitle => l10n.createNewMansionTitle;

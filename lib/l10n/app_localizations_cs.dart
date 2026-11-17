@@ -204,10 +204,10 @@ class AppLocalizationsCs extends AppLocalizations {
   String get inviteCodeExampleHint => 'Např. GRIM-42';
 
   @override
-  String get feedEmptyTitle => 'Kronika sídla mlčí';
+  String get chronicleEmptyTitle => 'Kronika sídla mlčí';
 
   @override
-  String get feedEmptyText =>
+  String get chronicleEmptyText =>
       'Zatím žádná zahraná karta. Pavučiny čekají na první zápis.';
 
   @override
@@ -612,12 +612,12 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String feedCardPlayedLine(String actor, String choreName, int coins) {
+  String chronicleCardPlayedLine(String actor, String choreName, int coins) {
     return '$actor zahrál/a kartu „$choreName“ a uložil/a $coins Coinů do Banku.';
   }
 
   @override
-  String feedExchangeMessage(
+  String chronicleExchangeMessage(
     String actor,
     int cardCount,
     int coins,
@@ -627,17 +627,17 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String feedMonthTitle(String monthKey) {
+  String chronicleMonthTitle(String monthKey) {
     return 'Měsíční vyhlášení • $monthKey';
   }
 
   @override
-  String feedMonthClosedNoWinner(String monthKey) {
+  String chronicleMonthClosedNoWinner(String monthKey) {
     return 'Měsíc $monthKey byl uzavřen. Levely se s novým měsícem resetují na Probuzený.';
   }
 
   @override
-  String feedMonthClosedWinner(
+  String chronicleMonthClosedWinner(
     String winner,
     String monthKey,
     int coins,
@@ -647,7 +647,7 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String feedMonthClosedWinnerNoCount(
+  String chronicleMonthClosedWinnerNoCount(
     String winner,
     String monthKey,
     int coins,
@@ -929,4 +929,15 @@ class AppLocalizationsCs extends AppLocalizations {
   String errorJoinMansionException(String error) {
     return 'Chyba při připojování k Sídlu: $error';
   }
+
+  @override
+  String get welcomeToMansionTitle => 'Vítej v Sídle';
+
+  @override
+  String welcomeToMansionBody(String name) {
+    return 'Připojil ses k Sídlu \"$name\". Vše je připraveno a nastaveno.';
+  }
+
+  @override
+  String get welcomeToMansionConfirmBtn => 'Vstoupit';
 }

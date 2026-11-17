@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import 'app_strings.dart';
@@ -15,18 +16,20 @@ class GangWorkspace {
     List<GangMember>? members,
     List<PlayedCard>? playedCards,
     List<ExchangeRequest>? exchangeRequests,
-    List<FeedEntry>? feedEntries,
+    List<ChronicleEntry>? chronicleEntries,
   }) : members = members ?? [],
        playedCards = playedCards ?? [],
        exchangeRequests = exchangeRequests ?? [],
-       feedEntries = feedEntries ?? [];
+       chronicleEntries = chronicleEntries ?? [],
+       remoteChronicleEntries = [];
 
   final Gang gang;
   String? currentMemberId;
   final List<GangMember> members;
   final List<PlayedCard> playedCards;
   final List<ExchangeRequest> exchangeRequests;
-  final List<FeedEntry> feedEntries;
+  final List<ChronicleEntry> chronicleEntries;
+  final List<ChronicleEntry> remoteChronicleEntries;
 }
 
 class MansionStore extends ChangeNotifier {
@@ -53,7 +56,10 @@ class MansionStore extends ChangeNotifier {
   String? avatarNickname;
   MemberSex avatarSex = MemberSex.male;
   String? pendingInviteCode;
+  String? pendingWelcomeMansionName;
   String? lastSyncError;
+  bool _isAcceptingPendingInvite = false;
+  String? _autoAttemptedInviteCode;
 
   bool get hasAvatar =>
       avatarNickname != null && avatarNickname!.trim().isNotEmpty;
@@ -61,11 +67,22 @@ class MansionStore extends ChangeNotifier {
 
   final List<GangWorkspace> _workspaces = [];
   String? _activeGangId;
+  String? _subscribedGangId;
+  StreamSubscription<List<Map<String, dynamic>>>? _membersSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _playedCardsSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _exchangesSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _chronicleSub;
 
   final List<GangMember> _emptyMembers = [];
   final List<PlayedCard> _emptyPlayedCards = [];
   final List<ExchangeRequest> _emptyExchangeRequests = [];
-  final List<FeedEntry> _emptyFeedEntries = [];
+  final List<ChronicleEntry> _emptyChronicleEntries = [];
+
+  @override
+  void dispose() {
+    _cancelActiveGangListeners();
+    super.dispose();
+  }
 
   GangWorkspace? get _activeWorkspace {
     final id = _activeGangId;
@@ -100,8 +117,8 @@ class MansionStore extends ChangeNotifier {
       _activeWorkspace?.playedCards ?? _emptyPlayedCards;
   List<ExchangeRequest> get exchangeRequests =>
       _activeWorkspace?.exchangeRequests ?? _emptyExchangeRequests;
-  List<FeedEntry> get feedEntries =>
-      _activeWorkspace?.feedEntries ?? _emptyFeedEntries;
+  List<ChronicleEntry> get chronicleEntries =>
+      _activeWorkspace?.chronicleEntries ?? _emptyChronicleEntries;
 
   List<ChoreDefinition> get deck => choreCatalog;
 
@@ -198,13 +215,70 @@ class MansionStore extends ChangeNotifier {
   void setPendingInviteCode(String? code) {
     final clean = code?.trim().toUpperCase();
     pendingInviteCode = (clean == null || clean.isEmpty) ? null : clean;
+    _autoAttemptedInviteCode = null;
     notifyListeners();
   }
 
   void clearPendingInviteCode() {
     if (pendingInviteCode == null) return;
     pendingInviteCode = null;
+    _autoAttemptedInviteCode = null;
     notifyListeners();
+  }
+
+  String? consumePendingWelcomeMansionName() {
+    final name = pendingWelcomeMansionName;
+    pendingWelcomeMansionName = null;
+    return name;
+  }
+
+  String _defaultInviteNickname() {
+    if (hasAvatar) return avatarNickname!.trim();
+    final displayName = _gangRepo.currentUser?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+    final email = authUserEmail?.trim();
+    if (email != null && email.contains('@')) {
+      final prefix = email.split('@').first.trim();
+      if (prefix.isNotEmpty) return prefix;
+    }
+    return 'Shadow';
+  }
+
+  Future<bool> acceptPendingInviteIfEligible() async {
+    final code = pendingInviteCode?.trim().toUpperCase();
+    if (code == null || code.isEmpty) return false;
+    if (!isSignedIn || pendingVerificationEmail != null) return false;
+    if (isReady) return false;
+    if (_isAcceptingPendingInvite || _autoAttemptedInviteCode == code) {
+      return false;
+    }
+
+    _isAcceptingPendingInvite = true;
+    _autoAttemptedInviteCode = code;
+    try {
+      final nickname = _defaultInviteNickname();
+      if (!hasAvatar) {
+        avatarNickname = nickname;
+      }
+      final ok = await joinGangByCodeAsync(
+        inviteCode: code,
+        nickname: nickname,
+        sex: avatarSex,
+      );
+      if (ok) {
+        pendingWelcomeMansionName =
+            gang?.name ?? _l10n.defaultMansionFallbackName;
+        notifyListeners();
+      } else {
+        hasSeenIntro = true;
+        notifyListeners();
+      }
+      return ok;
+    } finally {
+      _isAcceptingPendingInvite = false;
+    }
   }
 
   Gang? findGangByInviteCode(String inviteCode) {
@@ -221,6 +295,7 @@ class MansionStore extends ChangeNotifier {
   bool switchGang(String gangId) {
     if (!_workspaces.any((w) => w.gang.id == gangId)) return false;
     _activeGangId = gangId;
+    _attachActiveGangListeners();
     notifyListeners();
     return true;
   }
@@ -376,6 +451,7 @@ class MansionStore extends ChangeNotifier {
     _workspaces.removeAt(index);
     if (_activeGangId == gangId) {
       _activeGangId = _workspaces.isEmpty ? null : _workspaces.first.gang.id;
+      _attachActiveGangListeners();
     }
     if (isFirebaseReady) {
       unawaited(_gangRepo.deleteGang(gangId: gangId).catchError((_) {}));
@@ -401,6 +477,7 @@ class MansionStore extends ChangeNotifier {
     _workspaces.removeAt(index);
     if (_activeGangId == gangId) {
       _activeGangId = _workspaces.isEmpty ? null : _workspaces.first.gang.id;
+      _attachActiveGangListeners();
     }
     if (isFirebaseReady && memberId != null) {
       unawaited(
@@ -579,6 +656,9 @@ class MansionStore extends ChangeNotifier {
     avatarNickname = null;
     avatarSex = MemberSex.male;
     pendingInviteCode = null;
+    pendingWelcomeMansionName = null;
+    _autoAttemptedInviteCode = null;
+    _cancelActiveGangListeners();
     _workspaces.clear();
     _activeGangId = null;
     notifyListeners();
@@ -607,6 +687,7 @@ class MansionStore extends ChangeNotifier {
       if (_activeGangId == null && _workspaces.isNotEmpty) {
         _activeGangId = _workspaces.first.gang.id;
       }
+      _attachActiveGangListeners();
       if (_workspaces.isNotEmpty) {
         hasSeenIntro = true;
         if (!hasAvatar && currentMember != null) {
@@ -615,6 +696,7 @@ class MansionStore extends ChangeNotifier {
         }
       }
       notifyListeners();
+      await acceptPendingInviteIfEligible();
     } catch (_) {
       // Gracefully ignore startup sync errors when offline.
     }
@@ -696,6 +778,7 @@ class MansionStore extends ChangeNotifier {
       _workspaces.add(ws);
       _activeGangId = newGang.id;
       hasSeenIntro = true;
+      _attachActiveGangListeners();
 
       if (includeStarterFamily) {
         _populateGangWithSampleHistory(founder);
@@ -778,6 +861,7 @@ class MansionStore extends ChangeNotifier {
       _activeGangId = gangId;
       hasSeenIntro = true;
       pendingInviteCode = null;
+      _attachActiveGangListeners();
       notifyListeners();
       return true;
     } catch (e) {
@@ -801,25 +885,7 @@ class MansionStore extends ChangeNotifier {
       themeId: ThemeRegistry.resolve(gangData['themeId'] as String?).id,
     );
 
-    final members = membersData.map((m) {
-      final sexName = m['sex'] as String?;
-      final sex = MemberSex.values.firstWhere(
-        (s) => s.name == sexName,
-        orElse: () => MemberSex.male,
-      );
-      final rawFavorites = m['favoriteChoreIds'];
-      final favoriteChoreIds = rawFavorites is Iterable
-          ? rawFavorites.whereType<String>().toSet()
-          : <String>{};
-      return GangMember(
-        id: (m['id'] as String?) ?? '',
-        nickname: (m['nickname'] as String?) ?? 'Shadow',
-        isHand: (m['isHand'] as bool?) ?? false,
-        sex: sex,
-        heatPeakDays: (m['heatPeakDays'] as num?)?.toInt() ?? 0,
-        favoriteChoreIds: favoriteChoreIds,
-      );
-    }).toList();
+    final members = _parseRemoteMembers(membersData);
 
     final existingIdx = _workspaces.indexWhere((w) => w.gang.id == gangId);
     if (existingIdx >= 0) {
@@ -841,6 +907,301 @@ class MansionStore extends ChangeNotifier {
         ),
       );
     }
+  }
+
+  List<GangMember> _parseRemoteMembers(List<Map<String, dynamic>> membersData) {
+    return membersData.map((m) {
+      final sexName = m['sex'] as String?;
+      final sex = MemberSex.values.firstWhere(
+        (s) => s.name == sexName,
+        orElse: () => MemberSex.male,
+      );
+      final rawFavorites = m['favoriteChoreIds'];
+      final favoriteChoreIds = rawFavorites is Iterable
+          ? rawFavorites.whereType<String>().toSet()
+          : <String>{};
+      return GangMember(
+        id: (m['id'] as String?) ?? '',
+        nickname: (m['nickname'] as String?) ?? 'Shadow',
+        isHand: (m['isHand'] as bool?) ?? false,
+        sex: sex,
+        heatPeakDays: (m['heatPeakDays'] as num?)?.toInt() ?? 0,
+        lastActiveDay: _parseDateTime(m['lastActiveDay']),
+        favoriteChoreIds: favoriteChoreIds,
+      );
+    }).toList();
+  }
+
+  DateTime? _parseDateTime(Object? raw) {
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is DateTime) return raw;
+    if (raw is String) return DateTime.tryParse(raw);
+    return null;
+  }
+
+  ChoreDefinition _resolveChore(Map<String, dynamic> data) {
+    final choreId = data['choreId'] as String?;
+    if (choreId != null) {
+      for (final c in choreCatalog) {
+        if (c.id == choreId) return c;
+      }
+    }
+    final difficultyName = data['choreDifficulty'] as String?;
+    final difficulty = ChoreDifficulty.values.firstWhere(
+      (d) => d.name == difficultyName,
+      orElse: () => ChoreDifficulty.easy,
+    );
+    return ChoreDefinition(
+      id: choreId ?? 'custom',
+      title: (data['choreTitle'] as String?) ?? 'Chore',
+      symbol: (data['choreSymbol'] as String?) ?? '✦',
+      baseCoins: (data['choreBaseCoins'] as num?)?.toInt() ?? 10,
+      difficulty: difficulty,
+      minutes: (data['choreMinutes'] as num?)?.toInt() ?? 10,
+    );
+  }
+
+  GangWorkspace? _workspaceById(String gangId) {
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) return ws;
+    }
+    return null;
+  }
+
+  void _attachActiveGangListeners() {
+    if (!isFirebaseReady || !isSignedIn) {
+      _cancelActiveGangListeners();
+      return;
+    }
+    final gangId = _activeGangId;
+    if (gangId == null) {
+      _cancelActiveGangListeners();
+      return;
+    }
+    if (_subscribedGangId == gangId) return;
+
+    _cancelActiveGangListeners();
+    _subscribedGangId = gangId;
+
+    _membersSub = _gangRepo.watchGangMembers(gangId).listen(
+      (data) => _applyRemoteMembers(gangId, data),
+      onError: (_) {},
+    );
+    _playedCardsSub = _gangRepo.watchPlayedCards(gangId).listen(
+      (data) => _applyRemotePlayedCards(gangId, data),
+      onError: (_) {},
+    );
+    _exchangesSub = _gangRepo.watchExchanges(gangId).listen(
+      (data) => _applyRemoteExchanges(gangId, data),
+      onError: (_) {},
+    );
+    _chronicleSub = _gangRepo.watchChronicle(gangId).listen(
+      (data) => _applyRemoteChronicle(gangId, data),
+      onError: (_) {},
+    );
+  }
+
+  void _cancelActiveGangListeners() {
+    _subscribedGangId = null;
+    _membersSub?.cancel();
+    _membersSub = null;
+    _playedCardsSub?.cancel();
+    _playedCardsSub = null;
+    _exchangesSub?.cancel();
+    _exchangesSub = null;
+    _chronicleSub?.cancel();
+    _chronicleSub = null;
+  }
+
+  void _applyRemoteMembers(
+    String gangId,
+    List<Map<String, dynamic>> membersData,
+  ) {
+    final ws = _workspaceById(gangId);
+    if (ws == null) return;
+    ws.members
+      ..clear()
+      ..addAll(_parseRemoteMembers(membersData));
+    notifyListeners();
+  }
+
+  void _applyRemotePlayedCards(
+    String gangId,
+    List<Map<String, dynamic>> cardsData,
+  ) {
+    final ws = _workspaceById(gangId);
+    if (ws == null) return;
+
+    final parsed = cardsData.map((d) {
+      final playedAt = _parseDateTime(d['playedAt']) ?? _clock();
+      final levelName = d['levelAtPlay'] as String?;
+      final level = MonthlyLevel.values.firstWhere(
+        (l) => l.name == levelName,
+        orElse: () => MonthlyLevel.awakened,
+      );
+      final heatName = d['heatAtPlay'] as String?;
+      final heat = HeatLevel.values.firstWhere(
+        (h) => h.name == heatName,
+        orElse: () => HeatLevel.coldAsh,
+      );
+      final statusName = d['status'] as String?;
+      final status = PlayedCardStatus.values.firstWhere(
+        (s) => s.name == statusName,
+        orElse: () => PlayedCardStatus.inBank,
+      );
+      return PlayedCard(
+        id: (d['id'] as String?) ?? '',
+        chore: _resolveChore(d),
+        memberId: (d['memberId'] as String?) ?? '',
+        memberNickname: (d['memberNickname'] as String?) ?? 'Shadow',
+        coinsAwarded: (d['coinsAwarded'] as num?)?.toInt() ?? 0,
+        playedAt: playedAt,
+        monthKey: (d['monthKey'] as String?) ?? monthKeyFor(playedAt),
+        levelAtPlay: level,
+        heatAtPlay: heat,
+        status: status,
+        exchangeId: d['exchangeId'] as String?,
+        exchangedAt: _parseDateTime(d['exchangedAt']),
+      );
+    }).toList();
+
+    ws.playedCards
+      ..clear()
+      ..addAll(parsed);
+    _rebuildChronicleEntries(ws);
+    notifyListeners();
+  }
+
+  void _applyRemoteExchanges(
+    String gangId,
+    List<Map<String, dynamic>> exchangesData,
+  ) {
+    final ws = _workspaceById(gangId);
+    if (ws == null) return;
+
+    final parsed = exchangesData.map((d) {
+      final requestedAt = _parseDateTime(d['requestedAt']) ?? _clock();
+      final statusName = d['status'] as String?;
+      final status = ExchangeStatus.values.firstWhere(
+        (s) => s.name == statusName,
+        orElse: () => ExchangeStatus.pending,
+      );
+      final rawCardIds = d['cardIds'];
+      final cardIds = rawCardIds is Iterable
+          ? rawCardIds.whereType<String>().toList()
+          : <String>[];
+      return ExchangeRequest(
+        id: (d['id'] as String?) ?? '',
+        memberId: (d['memberId'] as String?) ?? '',
+        memberNickname: (d['memberNickname'] as String?) ?? 'Shadow',
+        cardIds: cardIds,
+        totalCoins: (d['totalCoins'] as num?)?.toInt() ?? 0,
+        coinsPerCzk: (d['coinsPerCzk'] as num?)?.toInt() ?? ws.gang.coinsPerCzk,
+        requestedAt: requestedAt,
+        monthKey: (d['monthKey'] as String?) ?? monthKeyFor(requestedAt),
+        isAutoMonthEnd: (d['isAutoMonthEnd'] as bool?) ?? false,
+        status: status,
+        approvedAt: _parseDateTime(d['approvedAt']),
+        approvedByNickname: d['approvedByNickname'] as String?,
+      );
+    }).toList();
+
+    ws.exchangeRequests
+      ..clear()
+      ..addAll(parsed);
+    notifyListeners();
+  }
+
+  void _applyRemoteChronicle(
+    String gangId,
+    List<Map<String, dynamic>> chronicleData,
+  ) {
+    final ws = _workspaceById(gangId);
+    if (ws == null) return;
+
+    final parsed = chronicleData.map((d) {
+      final createdAt = _parseDateTime(d['createdAt']) ?? _clock();
+      final typeName = d['type'] as String?;
+      final type = ChronicleEntryType.values.firstWhere(
+        (t) => t.name == typeName,
+        orElse: () => ChronicleEntryType.cardPlayed,
+      );
+      final levelName = d['levelAtEvent'] as String?;
+      final level = levelName == null
+          ? null
+          : MonthlyLevel.values.cast<MonthlyLevel?>().firstWhere(
+              (l) => l?.name == levelName,
+              orElse: () => null,
+            );
+      final heatName = d['heatAtEvent'] as String?;
+      final heat = heatName == null
+          ? null
+          : HeatLevel.values.cast<HeatLevel?>().firstWhere(
+              (h) => h?.name == heatName,
+              orElse: () => null,
+            );
+      return ChronicleEntry(
+        id: (d['id'] as String?) ?? '',
+        type: type,
+        actorNickname: (d['actorNickname'] as String?) ?? 'Shadow',
+        title: (d['title'] as String?) ?? '',
+        message: (d['message'] as String?) ?? '',
+        createdAt: createdAt,
+        monthKey: (d['monthKey'] as String?) ?? monthKeyFor(createdAt),
+        choreId: d['choreId'] as String?,
+        symbol: d['symbol'] as String?,
+        coins: (d['coins'] as num?)?.toInt(),
+        czkAmount: (d['czkAmount'] as num?)?.toInt(),
+        cardCount: (d['cardCount'] as num?)?.toInt(),
+        winnerNickname: d['winnerNickname'] as String?,
+        levelAtEvent: level,
+        heatAtEvent: heat,
+      );
+    }).toList();
+
+    ws.remoteChronicleEntries
+      ..clear()
+      ..addAll(parsed);
+    _rebuildChronicleEntries(ws);
+    notifyListeners();
+  }
+
+  void _rebuildChronicleEntries(GangWorkspace ws) {
+    final byId = <String, ChronicleEntry>{
+      for (final entry in ws.remoteChronicleEntries) entry.id: entry,
+    };
+
+    for (final card in ws.playedCards) {
+      final entryId = 'card_${card.id}';
+      if (!byId.containsKey(entryId)) {
+        final member = ws.members
+            .where((m) => m.id == card.memberId)
+            .cast<GangMember?>()
+            .firstWhere((_) => true, orElse: () => null);
+        final sex = member?.sex ?? MemberSex.male;
+        byId[entryId] = ChronicleEntry(
+          id: entryId,
+          type: ChronicleEntryType.cardPlayed,
+          actorNickname: card.memberNickname,
+          title: card.chore.title,
+          message:
+              '${sex.playedVerb} kartu „${card.chore.title}“ a ${sex.storedVerb} ${card.coinsAwarded} Coinů do Banku.',
+          createdAt: card.playedAt,
+          monthKey: card.monthKey,
+          choreId: card.chore.id,
+          symbol: card.chore.symbol,
+          coins: card.coinsAwarded,
+          levelAtEvent: card.levelAtPlay,
+          heatAtEvent: card.heatAtPlay,
+        );
+      }
+    }
+
+    final merged = byId.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    ws.chronicleEntries
+      ..clear()
+      ..addAll(merged);
   }
 
   void addMember(
@@ -1036,15 +1397,19 @@ class MansionStore extends ChangeNotifier {
 
   PlayedCard? playCard(ChoreDefinition chore) {
     final member = currentMember;
-    if (member == null || gang == null) return null;
+    final activeGang = gang;
+    if (member == null || activeGang == null) return null;
 
     final now = _clock();
     final coins = effectiveCoinsFor(chore, member);
     final level = monthlyLevelFor(member.id);
     final heat = heatLevelFor(member, at: now);
+    final cardId = isFirebaseReady
+        ? '${now.microsecondsSinceEpoch}_${member.id}_${_idSeq++}'
+        : _nextId('card');
 
     final played = PlayedCard(
-      id: _nextId('card'),
+      id: cardId,
       chore: chore,
       memberId: member.id,
       memberNickname: member.nickname,
@@ -1055,27 +1420,40 @@ class MansionStore extends ChangeNotifier {
       heatAtPlay: heat,
       status: PlayedCardStatus.inBank,
     );
-    playedCards.add(played);
+    playedCards.insert(0, played);
     _recordActivityForHeat(member, now);
 
-    feedEntries.insert(
-      0,
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.cardPlayed,
-        actorNickname: member.nickname,
-        title: chore.title,
-        message:
-            '${member.sex.playedVerb} kartu „${chore.title}“ a ${member.sex.storedVerb} $coins Coinů do Banku.',
-        createdAt: now,
-        monthKey: played.monthKey,
-        choreId: chore.id,
-        symbol: chore.symbol,
-        coins: coins,
-        levelAtEvent: monthlyLevelFor(member.id),
-        heatAtEvent: heatLevelFor(member, at: now),
-      ),
+    final entry = ChronicleEntry(
+      id: 'card_${played.id}',
+      type: ChronicleEntryType.cardPlayed,
+      actorNickname: member.nickname,
+      title: chore.title,
+      message:
+          '${member.sex.playedVerb} kartu „${chore.title}“ a ${member.sex.storedVerb} $coins Coinů do Banku.',
+      createdAt: now,
+      monthKey: played.monthKey,
+      choreId: chore.id,
+      symbol: chore.symbol,
+      coins: coins,
+      levelAtEvent: monthlyLevelFor(member.id),
+      heatAtEvent: heatLevelFor(member, at: now),
     );
+    chronicleEntries.insert(0, entry);
+
+    if (isFirebaseReady && isSignedIn) {
+      unawaited(
+        _gangRepo
+            .recordPlayedCard(
+              gangId: activeGang.id,
+              card: played,
+              memberSex: member.sex,
+              heatPeakDays: member.heatPeakDays,
+              lastActiveDay: member.lastActiveDay,
+              chronicleEntry: entry,
+            )
+            .catchError((_) {}),
+      );
+    }
 
     notifyListeners();
     return played;
@@ -1152,8 +1530,11 @@ class MansionStore extends ChangeNotifier {
 
     final now = _clock();
     final totalCoins = cards.fold(0, (sum, c) => sum + c.coinsAwarded);
+    final reqId = isFirebaseReady
+        ? '${now.microsecondsSinceEpoch}_${targetMember.id}_${_idSeq++}'
+        : _nextId('ex');
     final req = ExchangeRequest(
-      id: _nextId('ex'),
+      id: reqId,
       memberId: targetMember.id,
       memberNickname: targetMember.nickname,
       cardIds: cards.map((c) => c.id).toList(),
@@ -1170,6 +1551,13 @@ class MansionStore extends ChangeNotifier {
         ..exchangeId = req.id;
     }
     exchangeRequests.add(req);
+    if (isFirebaseReady && isSignedIn && gang != null) {
+      unawaited(
+        _gangRepo
+            .createExchangeRequest(gangId: gang!.id, request: req)
+            .catchError((_) {}),
+      );
+    }
     notifyListeners();
     return req;
   }
@@ -1195,6 +1583,13 @@ class MansionStore extends ChangeNotifier {
 
     if (req.cardIds.isEmpty) {
       exchangeRequests.removeAt(reqIndex);
+    }
+    if (isFirebaseReady && isSignedIn && gang != null) {
+      unawaited(
+        _gangRepo
+            .rejectCardInExchange(gangId: gang!.id, cardId: cardId)
+            .catchError((_) {}),
+      );
     }
     notifyListeners();
     return true;
@@ -1240,23 +1635,34 @@ class MansionStore extends ChangeNotifier {
         .firstWhere((_) => true, orElse: () => null);
     final exchangedVerb = requester?.sex.exchangedVerb ?? 'směnili';
 
-    feedEntries.insert(
-      0,
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.exchangeApproved,
-        actorNickname: req.memberNickname,
-        title: 'Směna schválena Rukou',
-        message:
-            '${req.memberNickname} $exchangedVerb ${approvedCards.length} karet za ${req.totalCoins} Coinů (${req.czkAmount} Kč).',
-        createdAt: now,
-        monthKey: req.monthKey,
-        symbol: '☞',
-        coins: req.totalCoins,
-        czkAmount: req.czkAmount,
-        cardCount: approvedCards.length,
-      ),
+    final entry = ChronicleEntry(
+      id: 'exchange_${req.id}',
+      type: ChronicleEntryType.exchangeApproved,
+      actorNickname: req.memberNickname,
+      title: 'Směna schválena Rukou',
+      message:
+          '${req.memberNickname} $exchangedVerb ${approvedCards.length} karet za ${req.totalCoins} Coinů (${req.czkAmount} Kč).',
+      createdAt: now,
+      monthKey: req.monthKey,
+      symbol: '☞',
+      coins: req.totalCoins,
+      czkAmount: req.czkAmount,
+      cardCount: approvedCards.length,
     );
+    chronicleEntries.insert(0, entry);
+
+    if (isFirebaseReady && isSignedIn && gang != null) {
+      unawaited(
+        _gangRepo
+            .approveExchange(
+              gangId: gang!.id,
+              request: req,
+              approvedCardIds: approvedCards.map((c) => c.id).toList(),
+              chronicleEntry: entry,
+            )
+            .catchError((_) {}),
+      );
+    }
 
     notifyListeners();
     return true;
@@ -1294,24 +1700,30 @@ class MansionStore extends ChangeNotifier {
         ? board.first
         : null;
 
-    feedEntries.insert(
-      0,
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.monthProclamation,
-        actorNickname: 'Ruka sídla',
-        title: 'Měsíční vyhlášení • $key',
-        message: winner == null
-            ? 'Měsíc $key byl uzavřen. Levely se s novým měsícem resetují na Probuzený.'
-            : '${winner.member.sex.winnerRole} měsíce $key ${winner.member.sex.becameVerb} ${winner.member.nickname} (${winner.approvedCoins} Coinů, ${winner.approvedTaskCount} úkolů).',
-        createdAt: now,
-        monthKey: key,
-        symbol: '♛',
-        coins: winner?.approvedCoins,
-        cardCount: winner?.approvedTaskCount,
-        winnerNickname: winner?.member.nickname,
-      ),
+    final entry = ChronicleEntry(
+      id: 'month_${key}_${now.microsecondsSinceEpoch}',
+      type: ChronicleEntryType.monthProclamation,
+      actorNickname: 'Ruka sídla',
+      title: 'Měsíční vyhlášení • $key',
+      message: winner == null
+          ? 'Měsíc $key byl uzavřen. Levely se s novým měsícem resetují na Probuzený.'
+          : '${winner.member.sex.winnerRole} měsíce $key ${winner.member.sex.becameVerb} ${winner.member.nickname} (${winner.approvedCoins} Coinů, ${winner.approvedTaskCount} úkolů).',
+      createdAt: now,
+      monthKey: key,
+      symbol: '♛',
+      coins: winner?.approvedCoins,
+      cardCount: winner?.approvedTaskCount,
+      winnerNickname: winner?.member.nickname,
     );
+    chronicleEntries.insert(0, entry);
+
+    if (isFirebaseReady && isSignedIn && gang != null) {
+      unawaited(
+        _gangRepo
+            .addChronicleEntry(gangId: gang!.id, entry: entry)
+            .catchError((_) {}),
+      );
+    }
 
     notifyListeners();
     return createdRequests;
@@ -1564,11 +1976,11 @@ class MansionStore extends ChangeNotifier {
       founderBankCard,
     ]);
 
-    // Chronological Feed (newest first) with Month Proclamation divider!
-    feedEntries.addAll([
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.cardPlayed,
+    // Chronological Chronicle (newest first) with Month Proclamation divider!
+    chronicleEntries.addAll([
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.cardPlayed,
         actorNickname: founder.nickname,
         title: founderBankCard.chore.title,
         message:
@@ -1581,9 +1993,9 @@ class MansionStore extends ChangeNotifier {
         levelAtEvent: MonthlyLevel.awakened,
         heatAtEvent: HeatLevel.blazingForge,
       ),
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.cardPlayed,
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.cardPlayed,
         actorNickname: shadow.nickname,
         title: pendingCard.chore.title,
         message:
@@ -1596,9 +2008,9 @@ class MansionStore extends ChangeNotifier {
         levelAtEvent: MonthlyLevel.awakened,
         heatAtEvent: HeatLevel.glowingEmbers,
       ),
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.exchangeApproved,
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.exchangeApproved,
         actorNickname: queen.nickname,
         title: 'Směna schválena Rukou',
         message: '${queen.nickname} směnila 2 karty za 1 170 Coinů (117 Kč).',
@@ -1609,9 +2021,9 @@ class MansionStore extends ChangeNotifier {
         czkAmount: 117,
         cardCount: 2,
       ),
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.cardPlayed,
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.cardPlayed,
         actorNickname: queen.nickname,
         title: currApproved1.chore.title,
         message:
@@ -1624,9 +2036,9 @@ class MansionStore extends ChangeNotifier {
         levelAtEvent: MonthlyLevel.awakened,
         heatAtEvent: HeatLevel.hellfire,
       ),
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.monthProclamation,
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.monthProclamation,
         actorNickname: 'Ruka sídla',
         title: 'Měsíční vyhlášení • $prevKey',
         message:
@@ -1638,9 +2050,9 @@ class MansionStore extends ChangeNotifier {
         cardCount: 1,
         winnerNickname: queen.nickname,
       ),
-      FeedEntry(
-        id: _nextId('feed'),
-        type: FeedEntryType.cardPlayed,
+      ChronicleEntry(
+        id: _nextId('chronicle'),
+        type: ChronicleEntryType.cardPlayed,
         actorNickname: queen.nickname,
         title: prevCard1.chore.title,
         message:

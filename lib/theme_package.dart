@@ -104,8 +104,8 @@ class GameThemePackage {
     required this.bankOutlinedIcon,
     required this.leaderboardIcon,
     required this.leaderboardOutlinedIcon,
-    required this.feedIcon,
-    required this.feedOutlinedIcon,
+    required this.chronicleIcon,
+    required this.chronicleOutlinedIcon,
     required this.currencyIcon,
     // Assets
     required this.cardAssetDirectory,
@@ -125,7 +125,7 @@ class GameThemePackage {
     required this.currencyShort,
     required this.vaultName,
     required this.deckName,
-    required this.feedName,
+    required this.chronicleName,
     required this.leaderboardName,
     required this.hallOfFameLabel,
     required this.defaultGangName,
@@ -178,8 +178,8 @@ class GameThemePackage {
   final IconData bankOutlinedIcon;
   final IconData leaderboardIcon;
   final IconData leaderboardOutlinedIcon;
-  final IconData feedIcon;
-  final IconData feedOutlinedIcon;
+  final IconData chronicleIcon;
+  final IconData chronicleOutlinedIcon;
   final IconData currencyIcon;
 
   // Assets
@@ -201,7 +201,7 @@ class GameThemePackage {
   final String currencyShort;
   final String vaultName;
   final String deckName;
-  final String feedName;
+  final String chronicleName;
   final String leaderboardName;
   final String hallOfFameLabel;
   final String defaultGangName;
@@ -368,8 +368,8 @@ class ThemeRegistry {
     bankOutlinedIcon: Icons.savings_outlined,
     leaderboardIcon: Icons.emoji_events,
     leaderboardOutlinedIcon: Icons.emoji_events_outlined,
-    feedIcon: Icons.dynamic_feed,
-    feedOutlinedIcon: Icons.dynamic_feed_outlined,
+    chronicleIcon: Icons.dynamic_feed,
+    chronicleOutlinedIcon: Icons.dynamic_feed_outlined,
     currencyIcon: Icons.toll,
     cardAssetDirectory: 'assets/cards',
     onboardingDeckArt: 'assets/art/spellbook_deck.png',
@@ -393,7 +393,7 @@ class ThemeRegistry {
     currencyShort: 'C',
     vaultName: 'Bank',
     deckName: 'Deck',
-    feedName: 'Feed',
+    chronicleName: 'Chronicle',
     leaderboardName: 'Žebříček',
     hallOfFameLabel: 'Síň slávy',
     defaultGangName: 'Sídlo Addamsů',
