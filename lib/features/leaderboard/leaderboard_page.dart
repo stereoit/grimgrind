@@ -38,29 +38,32 @@ class _LeaderboardPageState extends State<LeaderboardPage> {
         const SizedBox(height: 4),
         Text(s.leaderboardHeading, style: const TextStyle(fontSize: 26)),
         const SizedBox(height: 4),
-        const Text(
-          'Počítají se výhradně karty potvrzené směnou u Ruky.',
-          style: TextStyle(color: Color(0xFF968C80), fontSize: 12),
+        Text(
+          s.leaderboardSubtitle,
+          style: const TextStyle(color: Color(0xFF968C80), fontSize: 12),
         ),
         const SizedBox(height: 14),
         SegmentedButton<LeaderboardPeriod>(
           segments: [
             for (final p in LeaderboardPeriod.values)
-              ButtonSegment(value: p, label: Text(p.label)),
+              ButtonSegment(
+                value: p,
+                label: Text(s.leaderboardPeriodLabel(p)),
+              ),
           ],
           selected: {_period},
-          onSelectionChanged: (s) => setState(() => _period = s.first),
+          onSelectionChanged: (sel) => setState(() => _period = sel.first),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              for (final s in LeaderboardSort.values) ...[
+              for (final sortOption in LeaderboardSort.values) ...[
                 ChoiceChip(
-                  label: Text(s.label),
-                  selected: _sort == s,
-                  onSelected: (_) => setState(() => _sort = s),
+                  label: Text(s.leaderboardSortLabel(sortOption)),
+                  selected: _sort == sortOption,
+                  onSelected: (_) => setState(() => _sort = sortOption),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -88,6 +91,7 @@ class _PlayerLeaderboardCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final theme = ThemeScope.of(context);
     final auraColor = heatColor(context, data.heatLevel);
     final auraGlow = theme.heatGlowRadius(data.heatLevel);
@@ -146,9 +150,9 @@ class _PlayerLeaderboardCard extends StatelessWidget {
                         ),
                         if (data.member.isHand) ...[
                           const SizedBox(width: 6),
-                          const Tooltip(
-                            message: 'Zakladatel = Ruka',
-                            child: Icon(
+                          Tooltip(
+                            message: s.roleHandSubtitle,
+                            child: const Icon(
                               Icons.front_hand,
                               size: 16,
                               color: Color(0xFFC6A15B),
@@ -158,7 +162,7 @@ class _PlayerLeaderboardCard extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      '${data.monthlyLevel.label} (${data.monthlyLevel.utCallout})',
+                      '${s.monthlyLevelLabel(data.monthlyLevel, theme)} (${data.monthlyLevel.utCallout})',
                       style: const TextStyle(
                         color: Color(0xFFC6A15B),
                         fontSize: 12,
@@ -174,7 +178,7 @@ class _PlayerLeaderboardCard extends StatelessWidget {
                   color: auraColor,
                 ),
                 label: Text(
-                  '${data.heatLevel.label} (+${data.heatLevel.bonusPercent} %)',
+                  '${s.heatLabel(data.heatLevel, theme)} (+${data.heatLevel.bonusPercent}%)',
                   style: const TextStyle(fontSize: 11),
                 ),
               ),
@@ -185,25 +189,25 @@ class _PlayerLeaderboardCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniStat(
-                  label: 'ÚKOLY',
+                  label: s.leaderboardStatTasks,
                   value: '${data.approvedTaskCount}',
                 ),
               ),
               Expanded(
                 child: _MiniStat(
-                  label: 'COINY',
+                  label: s.leaderboardStatCoins,
                   value: '${data.approvedCoins}',
                 ),
               ),
               Expanded(
                 child: _MiniStat(
-                  label: 'STREAK',
+                  label: s.leaderboardStatStreak,
                   value: '${data.streakDays} d',
                 ),
               ),
               Expanded(
                 child: _MiniStat(
-                  label: 'ČAS',
+                  label: s.leaderboardStatTime,
                   value: '${data.approvedMinutes} m',
                 ),
               ),
@@ -214,7 +218,7 @@ class _PlayerLeaderboardCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'V Mešci čeká: ${data.inBankCount} karet (',
+                  s.inPouchWaitingPrefix(data.inBankCount),
                   style: const TextStyle(color: Color(0xFF968C80), fontSize: 11),
                 ),
                 CoinAmount(

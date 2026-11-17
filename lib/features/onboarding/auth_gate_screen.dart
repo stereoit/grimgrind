@@ -54,9 +54,10 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
           );
     if (!mounted) return;
     if (!ok) {
+      final s = AppStrings.of(context);
       setState(() {
         _isSubmitting = false;
-        _errorText = widget.store.lastSyncError ?? 'Ověření se nezdařilo.';
+        _errorText = widget.store.lastSyncError ?? s.authFailedFallback;
       });
     }
   }
@@ -70,8 +71,9 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     final ok = await widget.store.signInWithGoogleAsync();
     if (!mounted) return;
     if (!ok) {
+      final s = AppStrings.of(context);
       final msg =
-          widget.store.lastSyncError ?? 'Přihlášení přes Google selhalo.';
+          widget.store.lastSyncError ?? s.authGoogleFailedFallback;
       setState(() {
         _isSubmitting = false;
         _isSubmittingGoogle = false;
@@ -124,10 +126,10 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Přihlas se do svého rodu nebo založ nový účet.',
+                    Text(
+                      s.authSubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _mutedStone, fontSize: 13),
+                      style: const TextStyle(color: _mutedStone, fontSize: 13),
                     ),
                   ],
                 ),
@@ -143,16 +145,16 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SegmentedButton<bool>(
-                        segments: const [
+                        segments: [
                           ButtonSegment(
                             value: false,
-                            label: Text('Přihlásit se'),
-                            icon: Icon(Icons.login, size: 16),
+                            label: Text(s.authSignInTab),
+                            icon: const Icon(Icons.login, size: 16),
                           ),
                           ButtonSegment(
                             value: true,
-                            label: Text('Registrace'),
-                            icon: Icon(Icons.person_add_alt_1, size: 16),
+                            label: Text(s.authRegisterTab),
+                            icon: const Icon(Icons.person_add_alt_1, size: 16),
                           ),
                         ],
                         selected: {_isRegisterMode},
@@ -305,10 +307,10 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  '„Kdo překročí práh bez pečetě, stane se pouhým stínem v kronice.“',
+                Text(
+                  s.authFooterQuote,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: _mutedStone,
                     fontSize: 12,
                     fontStyle: FontStyle.italic,

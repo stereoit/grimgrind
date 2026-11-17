@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_strings.dart';
 import '../../theme_package.dart';
 
 /// Dedicated gothic loading/splash screen shown on app launch before entering
@@ -49,14 +50,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final theme = ThemeScope.of(context);
-    final isCzech = Localizations.localeOf(context).languageCode == 'cs';
-    final tagline = isCzech
-        ? 'SÍDLO A DOMÁCÍ KÁZEŇ'
-        : 'THE MANSION & HOUSEHOLD GRIND';
-    final loadingLabel = isCzech
-        ? 'VYMETÁNÍ PAVUČIN ZE SÍDLA...'
-        : 'SWEEPING COBWEBS FROM THE MANSION...';
+    final tagline = s.splashTagline;
+    final loadingLabel = s.splashLoading;
 
     return Scaffold(
       backgroundColor: theme.voidBackground,

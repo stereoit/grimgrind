@@ -47,7 +47,7 @@ class UpdateInfo {
         '1.0.0';
 
     final releaseNotes =
-        (data['releaseNotes'] as String?)?.trim() ?? 'Nová verze GrimGrind';
+        (data['releaseNotes'] as String?)?.trim() ?? 'New GrimGrind version';
 
     final url = isAndroid
         ? (data['androidUrl'] as String?) ?? (data['fallbackUrl'] as String?)

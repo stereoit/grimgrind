@@ -210,13 +210,13 @@ void main() {
       await tester.tap(find.text('Open Invite'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Pozvánka do: Rose Manor'), findsOneWidget);
+      expect(find.text('Invite to: Rose Manor'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField).last, 'Morticia');
-      await tester.tap(find.text('Žena'));
+      await tester.tap(find.text('Female'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Připojit se'));
+      await tester.tap(find.text('Join'));
       await tester.pumpAndSettle();
 
       expect(store.currentMember!.nickname, 'Morticia');
@@ -245,7 +245,7 @@ void main() {
 
       // Update Nickname and Sex in Mansion tab.
       await tester.enterText(find.byType(TextField).first, 'Gomez');
-      await tester.tap(find.text('Neutrální'));
+      await tester.tap(find.text('Neutral'));
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 

@@ -182,12 +182,13 @@ class MemberSexSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'POHLAVÍ (PRO SPRÁVNÉ SKLOŇOVÁNÍ V KRONICE)',
-          style: TextStyle(
+        Text(
+          s.sexSelectorLabel,
+          style: const TextStyle(
             color: _goldAccent,
             fontSize: 10,
             letterSpacing: 1.1,
@@ -219,7 +220,7 @@ class MemberSexSelector extends StatelessWidget {
                             : null,
                       ),
                       child: Text(
-                        sex.label,
+                        s.memberSexLabel(sex),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
@@ -318,6 +319,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final resolvedCode = _resolveCode(_codeController.text);
     final matchedGang = widget.store.findGangByInviteCode(resolvedCode);
     final matchedGangName = matchedGang?.name ?? _remoteMatchedGangName;
@@ -329,30 +331,30 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Column(
+          Column(
             children: [
-              _GothicCrest(icon: Icons.mail_outline),
-              SizedBox(height: 6),
+              const _GothicCrest(icon: Icons.mail_outline),
+              const SizedBox(height: 6),
               Text(
-                'VSTUP DO SPOLEČENSTVA',
-                style: TextStyle(
+                s.joinFellowshipEyebrow,
+                style: const TextStyle(
                   color: _goldAccent,
                   fontSize: 10,
                   letterSpacing: 2.2,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
-                'Přijmout pozvánku do Sídla',
+                s.acceptInviteTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
-                'Ověřte kód brány a podepište se do rodové knihy.',
+                s.acceptInviteSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _mutedStone, fontSize: 11),
+                style: const TextStyle(color: _mutedStone, fontSize: 11),
               ),
             ],
           ),
@@ -371,7 +373,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               child: Column(
                 children: [
                   Text(
-                    'Pozvánka do: $matchedGangName',
+                    s.inviteForGang(matchedGangName),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: _goldAccent,
@@ -382,7 +384,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                   if (matchedCount != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '$matchedCount stávajících členů',
+                      s.existingMembersCount(matchedCount),
                       style: const TextStyle(color: _mutedStone, fontSize: 11),
                     ),
                   ],
@@ -409,8 +411,8 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               ),
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Zvací kód nebo odkaz',
-              hintText: 'GRIM-42 nebo https://grim-grind.web.app/join?code=...',
+              labelText: s.inviteCodeOrLinkLabel,
+              hintText: 'GRIM-42 / https://grim-grind.web.app/join?code=...',
               suffixIcon: Icon(
                 matchedGangName != null
                     ? Icons.verified
@@ -425,22 +427,22 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
           const SizedBox(height: 10),
           TextField(
             controller: _nicknameController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 10,
               ),
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Tvoje přezdívka v tomto Sídle',
-              hintText: 'Např. Shadow Master',
-              suffixIcon: Icon(
+              labelText: s.nicknameInMansionLabel,
+              hintText: s.nicknameExampleHint,
+              suffixIcon: const Icon(
                 Icons.badge_outlined,
                 color: _mutedStone,
                 size: 18,
               ),
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 10),
@@ -456,9 +458,9 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
-                    'Zrušit',
-                    style: TextStyle(color: _mutedStone),
+                  child: Text(
+                    s.cancelBtn,
+                    style: const TextStyle(color: _mutedStone),
                   ),
                 ),
               ),
@@ -467,7 +469,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                 flex: 2,
                 child: _BloodWineButton(
                   icon: Icons.login,
-                  label: _isSubmitting ? 'Připojuji se...' : 'Připojit se',
+                  label: _isSubmitting ? s.joiningBtn : s.joinBtn,
                   onPressed: _isSubmitting
                       ? () {}
                       : () async {
@@ -486,7 +488,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                             setState(() {
                               _isSubmitting = false;
                               _errorText = widget.store.lastSyncError ??
-                                  'Neplatný zvací kód Sídla.';
+                                  s.invalidInviteCodeError;
                             });
                             return;
                           }
@@ -541,35 +543,36 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return _GothicModalFrame(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Column(
+          Column(
             children: [
-              _GothicCrest(icon: Icons.castle_outlined),
-              SizedBox(height: 10),
+              const _GothicCrest(icon: Icons.castle_outlined),
+              const SizedBox(height: 10),
               Text(
-                'ZAKLÁDACÍ LISTINA PANSTVÍ',
-                style: TextStyle(
+                s.createMansionCharterEyebrow,
+                style: const TextStyle(
                   color: _goldAccent,
                   fontSize: 10,
                   letterSpacing: 2.2,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'Založit nové Sídlo',
+                s.createNewMansionTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
-                'Vytvořte nové panství sídla. Stanete se Rukou a pánem nad pravidly pokladnice.',
+                s.createNewMansionSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _mutedStone, fontSize: 12),
+                style: const TextStyle(color: _mutedStone, fontSize: 12),
               ),
             ],
           ),
@@ -578,32 +581,32 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
           const SizedBox(height: 14),
           TextField(
             controller: _gangController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Název Sídla',
-              hintText: 'Např. Sídlo Havranů',
-              suffixIcon: Icon(
+              labelText: s.mansionNameLabel,
+              hintText: s.mansionNameHint,
+              suffixIcon: const Icon(
                 Icons.domain_outlined,
                 color: _mutedStone,
                 size: 18,
               ),
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _nickController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Tvoje přezdívka (Ruka)',
-              suffixIcon: Icon(
+              labelText: s.founderHandNicknameLabel,
+              suffixIcon: const Icon(
                 Icons.front_hand_outlined,
                 color: _mutedStone,
                 size: 18,
               ),
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 14),
@@ -634,9 +637,9 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
               Expanded(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
-                    'Zrušit',
-                    style: TextStyle(color: _mutedStone),
+                  child: Text(
+                    s.cancelBtn,
+                    style: const TextStyle(color: _mutedStone),
                   ),
                 ),
               ),
@@ -645,7 +648,7 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
                 flex: 2,
                 child: _BloodWineButton(
                   icon: Icons.castle_outlined,
-                  label: _isSubmitting ? 'Zakládám...' : 'Založit',
+                  label: _isSubmitting ? s.creatingBtn : s.createBtn,
                   onPressed: _isSubmitting
                       ? () {}
                       : () async {
@@ -664,7 +667,7 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
                             setState(() {
                               _isSubmitting = false;
                               _errorText = widget.store.lastSyncError ??
-                                  'Nepodařilo se založit Sídlo.';
+                                  s.createMansionFailedError;
                             });
                             return;
                           }
@@ -690,6 +693,7 @@ class MyGangsPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: store,
       builder: (context, _) {
+        final s = AppStrings.of(context);
         final gangs = store.myGangs;
         final activeId = store.gang?.id;
         final activeNick = store.currentMember?.nickname;
@@ -698,18 +702,18 @@ class MyGangsPage extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             titleSpacing: 4,
-            title: const Column(
+            title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'SPRÁVA SÍDEL',
-                  style: TextStyle(
+                  s.mansionsManagementEyebrow,
+                  style: const TextStyle(
                     color: _goldAccent,
                     letterSpacing: 2.2,
                     fontSize: 10,
                   ),
                 ),
-                Text('Moje Sídla', style: TextStyle(fontSize: 20)),
+                Text(s.myGangsBtn, style: const TextStyle(fontSize: 20)),
               ],
             ),
           ),
@@ -722,7 +726,7 @@ class MyGangsPage extends StatelessWidget {
                     child: _BloodWineButton(
                       onPressed: () => showCreateGangDialog(context, store),
                       icon: Icons.castle_outlined,
-                      label: 'Založit Sídlo',
+                      label: s.createMansionBtn,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -748,7 +752,7 @@ class MyGangsPage extends StatelessWidget {
                         size: 17,
                         color: _goldAccent,
                       ),
-                      label: const Text('Přijmout kód'),
+                      label: Text(s.acceptCodeBtn),
                     ),
                   ),
                 ],
@@ -758,7 +762,7 @@ class MyGangsPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'PŘEHLED SPOLEČENSTEV (${gangs.length})',
+                    s.fellowshipsOverview(gangs.length),
                     style: const TextStyle(
                       color: _mutedStone,
                       letterSpacing: 1.6,
@@ -778,11 +782,11 @@ class MyGangsPage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (gangs.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     child: Text(
-                      'Zatím nejsi členem žádného Sídla.',
+                      s.noMansionsYet,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -816,21 +820,21 @@ class MyGangsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: _gothBorder.withValues(alpha: 0.7)),
                 ),
-                child: const Column(
+                child: Column(
                   children: [
                     Text(
-                      '„Spolek bez pevného sídla je pouhým hloučkem poutníků ve vichřici. Ruka vládne tam, kde pečeť drží slovo.“',
+                      s.canonQuote,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontStyle: FontStyle.italic,
                         fontSize: 12,
                         color: _goldAccent,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      '— KÁNON ŘÁDU HAVRANŮ',
-                      style: TextStyle(
+                      s.canonAttribution,
+                      style: const TextStyle(
                         color: _mutedStone,
                         fontSize: 10,
                         letterSpacing: 1.2,
@@ -868,6 +872,7 @@ class _GangTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
@@ -911,9 +916,9 @@ class _GangTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(color: _bloodBorder),
                           ),
-                          child: const Text(
-                            'AKTIVNÍ',
-                            style: TextStyle(
+                          child: Text(
+                            s.activeMansionBadge,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -931,16 +936,16 @@ class _GangTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(color: _gothBorder),
                           ),
-                          child: const Text(
-                            'ZÁLOŽNÍ',
-                            style: TextStyle(
+                          child: Text(
+                            s.standbyBadge,
+                            style: const TextStyle(
                               fontSize: 10,
                               color: _mutedStone,
                             ),
                           ),
                         ),
                       Text(
-                        isOwner ? 'RUKA (VLASTNÍK)' : 'ČLEN',
+                        isOwner ? s.roleHandOwnerBadge : s.roleMemberBadge,
                         style: TextStyle(
                           fontSize: 10,
                           letterSpacing: 1,
@@ -959,7 +964,7 @@ class _GangTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '$memberCount členů',
+                        s.membersCountLabel(memberCount),
                         style: const TextStyle(color: _mutedStone, fontSize: 11),
                       ),
                     ],
@@ -983,7 +988,7 @@ class _GangTile extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Přezdívka: $nickname',
+                          s.nicknameLine(nickname),
                           style: const TextStyle(
                             color: _mutedStone,
                             fontSize: 12,
@@ -1008,7 +1013,7 @@ class _GangTile extends StatelessWidget {
                       ),
                     ),
                     onPressed: onManage,
-                    child: const Text('Spravovat'),
+                    child: Text(s.manageBtn),
                   ),
                 ],
               ),
@@ -1035,9 +1040,9 @@ class _GangTile extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Text(
-                        'Zvací kód: ',
-                        style: TextStyle(color: _mutedStone, fontSize: 11),
+                      Text(
+                        s.inviteCodePrefix,
+                        style: const TextStyle(color: _mutedStone, fontSize: 11),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1062,7 +1067,7 @@ class _GangTile extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    'Směna: ${gang.coinsPerCzk} Zl = 1 Kč',
+                    s.exchangeRateLine(gang.coinsPerCzk),
                     style: const TextStyle(color: _mutedStone, fontSize: 11),
                   ),
                 ],
@@ -1095,14 +1100,11 @@ class ManageGangPage extends StatelessWidget {
           orElse: () => null,
         );
         if (gang == null) {
+          final s = AppStrings.of(context);
           return Scaffold(
-            appBar: AppBar(title: Text(AppStrings.of(context).navMansion)),
+            appBar: AppBar(title: Text(s.navMansion)),
             body: Center(
-              child: Text(
-                AppStrings.of(context).isCs
-                    ? 'Sídlo bylo smazáno.'
-                    : 'Mansion was deleted.',
-              ),
+              child: Text(s.mansionWasDeleted),
             ),
           );
         }
@@ -1112,11 +1114,11 @@ class ManageGangPage extends StatelessWidget {
         final isOwner = store.isOwnerOf(gangId);
         final isActive = store.gang?.id == gangId;
         final members = store.membersOf(gangId);
-        final inviteMessage = s.isCs
-            ? 'Přidej se do mého Sídla „${gang.name}“ v GrimGrind! '
-                'Otevři odkaz: ${gang.inviteUrl} (nebo zadej kód ${gang.inviteCode}).'
-            : 'Join my Mansion "${gang.name}" in GrimGrind! '
-                'Open link: ${gang.inviteUrl} (or enter code ${gang.inviteCode}).';
+        final inviteMessage = s.shareInviteMessage(
+          gang.name,
+          gang.inviteUrl,
+          gang.inviteCode,
+        );
 
         return Scaffold(
           appBar: AppBar(
@@ -1132,9 +1134,9 @@ class ManageGangPage extends StatelessWidget {
                     fontSize: 10,
                   ),
                 ),
-                const Text(
-                  'Správa a Pozvánky',
-                  style: TextStyle(fontSize: 18),
+                Text(
+                  s.manageAndInvitesTitle,
+                  style: const TextStyle(fontSize: 18),
                 ),
               ],
             ),
@@ -1155,7 +1157,7 @@ class ManageGangPage extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      isOwner ? 'RUKA' : 'ČLEN',
+                      isOwner ? s.roleHandShort : s.roleMemberBadge,
                       style: const TextStyle(
                         color: _bloodBorder,
                         fontSize: 10,
@@ -1211,7 +1213,7 @@ class ManageGangPage extends StatelessWidget {
                             child: Text(
                               isActive
                                   ? s.activeMansionBadge
-                                  : (s.isCs ? 'NEAKTIVNÍ' : 'INACTIVE'),
+                                  : s.inactiveBadge,
                               style: TextStyle(
                                 color: isActive ? _boneText : _mutedStone,
                                 fontSize: 10,
@@ -1274,19 +1276,19 @@ class ManageGangPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Row(
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'POZVÁNKA PRO PŘÁTELE (IM ODKAZ)',
-                          style: TextStyle(
+                          s.inviteFriendsSection,
+                          style: const TextStyle(
                             color: _goldAccent,
                             letterSpacing: 1.6,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Icon(Icons.share_outlined, color: _goldAccent, size: 17),
+                        const Icon(Icons.share_outlined, color: _goldAccent, size: 17),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1302,9 +1304,9 @@ class ManageGangPage extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          const Text(
-                            'UNIKÁTNÍ ZVACÍ KÓD',
-                            style: TextStyle(
+                          Text(
+                            s.uniqueInviteCodeLabel,
+                            style: const TextStyle(
                               color: _mutedStone,
                               fontSize: 10,
                               letterSpacing: 1.4,
@@ -1363,16 +1365,14 @@ class ManageGangPage extends StatelessWidget {
                         );
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Zvací odkaz zkopírován pro odeslání v chatu.',
-                              ),
+                            SnackBar(
+                              content: Text(s.inviteLinkCopiedSnackbar),
                             ),
                           );
                         }
                       },
                       icon: Icons.copy_outlined,
-                      label: 'Zkopírovat zvací odkaz do zpráv',
+                      label: s.copyInviteLinkBtn,
                     ),
                     if (isOwner) ...[
                       const SizedBox(height: 8),
@@ -1391,7 +1391,7 @@ class ManageGangPage extends StatelessWidget {
                           if (next != null && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Nový zvací kód: $next'),
+                                content: Text(s.newInviteCodeSnackbar(next)),
                               ),
                             );
                           }
@@ -1401,7 +1401,7 @@ class ManageGangPage extends StatelessWidget {
                           size: 17,
                           color: _goldAccent,
                         ),
-                        label: const Text('Obnovit zvací kód'),
+                        label: Text(s.regenerateInviteCodeBtn),
                       ),
                     ],
                   ],
@@ -1501,7 +1501,7 @@ class ManageGangPage extends StatelessWidget {
                                   border: Border.all(color: _bloodBorder),
                                 ),
                                 child: Text(
-                                  s.isCs ? 'RUKA' : 'THE HAND',
+                                  s.roleHandShort,
                                   style: const TextStyle(
                                     color: _goldAccent,
                                     fontSize: 9,
@@ -1545,7 +1545,7 @@ class ManageGangPage extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              s.isCs ? 'NEBEZPEČNÁ ZÓNA' : 'DANGER ZONE',
+                              s.dangerZoneEyebrow,
                               style: const TextStyle(
                                 color: _bloodBorder,
                                 letterSpacing: 1.6,
@@ -1556,9 +1556,7 @@ class ManageGangPage extends StatelessWidget {
                           ],
                         ),
                         Text(
-                          isOwner
-                              ? (s.isCs ? 'VLASTNÍK' : 'OWNER')
-                              : (s.isCs ? 'ČLEN' : 'MEMBER'),
+                          isOwner ? s.ownerBadge : s.roleMemberBadge,
                           style: const TextStyle(
                             color: _mutedStone,
                             fontSize: 10,
@@ -1582,9 +1580,7 @@ class ManageGangPage extends StatelessWidget {
                     if (isOwner) ...[
                       const SizedBox(height: 12),
                       Text(
-                        s.isCs
-                            ? 'Smazáním Sídla trvale odstraníš celé panství, kroniku, karty v Mešci i všechny členy. Tato akce je nevratná.'
-                            : 'Deleting the Mansion permanently removes the household, chronicle, pouch cards, and all members. This cannot be undone.',
+                        s.deleteMansionWarning,
                         style: const TextStyle(color: _mutedStone, fontSize: 12),
                       ),
                       const SizedBox(height: 12),
@@ -1619,7 +1615,7 @@ class ManageGangPage extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.isCs ? 'Zrušit' : 'Cancel'),
+            child: Text(s.cancelBtn),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -1696,9 +1692,9 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
                 fillColor: _bloodWine.withValues(alpha: 0.2),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'KONEČNÉ ROZHODNUTÍ',
-                style: TextStyle(
+              Text(
+                AppStrings.of(context).finalDecisionEyebrow,
+                style: const TextStyle(
                   color: _bloodBorder,
                   fontSize: 10,
                   letterSpacing: 2,
@@ -1713,9 +1709,9 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
               ),
               const SizedBox(height: 6),
               Text(
-                AppStrings.of(context).isCs
-                    ? 'Tato akce trvale smaže „${widget.gang.name}“ včetně všech karet a historie. Pro potvrzení napiš přesný název Sídla:'
-                    : 'This permanently deletes "${widget.gang.name}" including all cards and history. Type the exact Mansion name to confirm:',
+                AppStrings.of(context).deleteMansionConfirmPrompt(
+                  widget.gang.name,
+                ),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: _mutedStone, fontSize: 12),
               ),
@@ -1729,7 +1725,7 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
             decoration: InputDecoration(
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Napiš: ${widget.gang.name}',
+              labelText: AppStrings.of(context).typeExactNameLabel(widget.gang.name),
               border: const OutlineInputBorder(),
             ),
           ),
@@ -1749,9 +1745,7 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
                   ),
                   onPressed: () => Navigator.pop(context, false),
                   child: Text(
-                    AppStrings.of(context).isCs
-                        ? 'Ponechat Sídlo'
-                        : 'Keep Mansion',
+                    AppStrings.of(context).keepMansionBtn,
                   ),
                 ),
               ),
@@ -1759,9 +1753,7 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
               Expanded(
                 child: _BloodWineButton(
                   icon: Icons.delete_forever_outlined,
-                  label: AppStrings.of(context).isCs
-                      ? 'Trvale smazat'
-                      : 'Delete Forever',
+                  label: AppStrings.of(context).deleteForeverBtn,
                   onPressed: matches
                       ? () {
                           final ok = widget.store.deleteGang(
@@ -1794,6 +1786,7 @@ class _ThemePackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final activeTheme = ThemeRegistry.resolve(gang.themeId);
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1808,9 +1801,9 @@ class _ThemePackageCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'TÉMA / MOTIV SÍDLA',
-                style: TextStyle(
+              Text(
+                s.themeSectionTitle,
+                style: const TextStyle(
                   color: _goldAccent,
                   letterSpacing: 1.6,
                   fontSize: 10,
@@ -1818,16 +1811,14 @@ class _ThemePackageCard extends StatelessWidget {
                 ),
               ),
               Text(
-                isOwner ? 'POUZE RUKA' : 'JEN ČTENÍ',
+                isOwner ? s.handOnlyLabel : s.readOnlyLabel,
                 style: const TextStyle(color: _mutedStone, fontSize: 10),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            isOwner
-                ? 'Vlastník může pro nové období zvolit balíček tématu. Výchozím tématem je Gothic Mansion.'
-                : 'Aktivní téma nastavené vlastníkem Sídla.',
+            isOwner ? s.themeOwnerHint : s.themeMemberHint,
             style: const TextStyle(color: _mutedStone, fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -1875,7 +1866,7 @@ class _ThemePackageCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            theme.subtitle,
+                            s.themeSubtitle(theme),
                             style: const TextStyle(
                               color: _mutedStone,
                               fontSize: 11,

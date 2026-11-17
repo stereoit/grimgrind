@@ -21,7 +21,8 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
   bool _includeStarterFamily = true;
   bool _isSubmitting = false;
   late MemberSex _selectedSex = widget.store.avatarSex;
-  final _gangNameController = TextEditingController(text: 'Sídlo Addamsů');
+  final _gangNameController = TextEditingController();
+  bool _didInitGangName = false;
   late final _nicknameController = TextEditingController(
     text: widget.store.avatarNickname ?? 'Dark Lord',
   );
@@ -35,6 +36,15 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
     super.initState();
     if (widget.store.pendingInviteCode != null) {
       _createMode = false;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInitGangName) {
+      _didInitGangName = true;
+      _gangNameController.text = AppStrings.of(context).defaultMansionName;
     }
   }
 
@@ -63,9 +73,9 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'ZALOŽENÍ NEBO PŘIPOJENÍ',
-              style: TextStyle(
+            Text(
+              s.gangSetupEyebrow,
+              style: const TextStyle(
                 color: Color(0xFFC6A15B),
                 letterSpacing: 2,
                 fontSize: 10,
@@ -74,9 +84,9 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
             const SizedBox(height: 6),
             Text(s.gangSetupTitle, style: const TextStyle(fontSize: 28)),
             const SizedBox(height: 8),
-            const Text(
-              'Zakládající člen získá roli Ruky (nastavuje kurz Coin → Kč a schvaluje směny) a pozve ostatní přes zvací kód.',
-              style: TextStyle(color: Color(0xFF968C80), height: 1.4),
+            Text(
+              s.gangSetupSubtitle,
+              style: const TextStyle(color: Color(0xFF968C80), height: 1.4),
             ),
             const SizedBox(height: 20),
             SegmentedButton<bool>(
@@ -101,16 +111,16 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
               TextField(
                 controller: _gangNameController,
                 decoration: InputDecoration(
-                  labelText: s.isCs ? 'Název Sídla' : 'Mansion Name',
+                  labelText: s.mansionNameLabel,
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _nicknameController,
-                decoration: const InputDecoration(
-                  labelText: 'Tvoje přezdívka (Zakladatel = Ruka)',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: s.founderNicknameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
@@ -123,10 +133,8 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
                 contentPadding: EdgeInsets.zero,
                 value: _includeStarterFamily,
                 onChanged: (v) => setState(() => _includeStarterFamily = v),
-                title: const Text('Přidat ukázkové členy & historii'),
-                subtitle: const Text(
-                  'Ideální pro okamžité vyzkoušení Leaderboardu a schvalování směn',
-                ),
+                title: Text(s.starterFamilyTitle),
+                subtitle: Text(s.starterFamilySubtitle),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
@@ -148,9 +156,7 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
                             SnackBar(
                               content: Text(
                                 widget.store.lastSyncError ??
-                                    (s.isCs
-                                        ? 'Nepodařilo se založit Sídlo.'
-                                        : 'Failed to create Mansion.'),
+                                    s.createMansionFailedError,
                               ),
                             ),
                           );
@@ -166,17 +172,17 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
                 controller: _inviteCodeController,
                 textCapitalization: TextCapitalization.characters,
                 decoration: InputDecoration(
-                  labelText: s.isCs ? 'Zvací kód Sídla' : 'Mansion Invite Code',
-                  hintText: s.isCs ? 'Např. GRIM-42' : 'e.g. GRIM-42',
+                  labelText: s.mansionInviteCodeLabel,
+                  hintText: s.inviteCodeExampleHint,
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: _nicknameController,
-                decoration: const InputDecoration(
-                  labelText: 'Tvoje temná přezdívka',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: s.createAvatarNicknameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
@@ -203,9 +209,7 @@ class _GangSetupScreenState extends State<GangSetupScreen> {
                             SnackBar(
                               content: Text(
                                 widget.store.lastSyncError ??
-                                    (s.isCs
-                                        ? 'Neplatný zvací kód Sídla.'
-                                        : 'Invalid Mansion invite code.'),
+                                    s.invalidInviteCodeError,
                               ),
                             ),
                           );

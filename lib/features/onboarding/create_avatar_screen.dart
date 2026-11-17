@@ -80,17 +80,17 @@ class _CreateAvatarScreenState extends State<CreateAvatarScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Tvůj Temný Avatar',
+                      s.createAvatarTitle,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: _boneText,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Zvol si přezdívku a rodovou podobu pro kroniku Sídla.',
+                    Text(
+                      s.createAvatarSubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: _mutedStone, fontSize: 13),
+                      style: const TextStyle(color: _mutedStone, fontSize: 13),
                     ),
                   ],
                 ),
@@ -107,17 +107,17 @@ class _CreateAvatarScreenState extends State<CreateAvatarScreen> {
                     children: [
                       TextField(
                         controller: _nicknameController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           filled: true,
                           fillColor: _voidBg,
-                          labelText: 'Tvoje temná přezdívka',
-                          hintText: 'Např. Shadow Master',
-                          prefixIcon: Icon(
+                          labelText: s.createAvatarNicknameLabel,
+                          hintText: s.nicknameExampleHint,
+                          prefixIcon: const Icon(
                             Icons.person_outline,
                             color: _mutedStone,
                             size: 18,
                           ),
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 16),

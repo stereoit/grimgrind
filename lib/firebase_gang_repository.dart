@@ -81,7 +81,7 @@ class FirebaseGangRepository {
     if (idToken == null) {
       throw FirebaseAuthException(
         code: 'missing-google-id-token',
-        message: 'Google Sign-In nevrátil ID token.',
+        message: 'Google Sign-In did not return an ID token.',
       );
     }
     final credential = GoogleAuthProvider.credential(idToken: idToken);
@@ -174,7 +174,7 @@ class FirebaseGangRepository {
     final invite = await lookupInvite(inviteCode);
     if (invite == null) return null;
     final gangId = invite['gangId'] as String?;
-    final gangName = (invite['gangName'] as String?) ?? 'Sídlo';
+    final gangName = (invite['gangName'] as String?) ?? 'Mansion';
     if (gangId == null || gangId.isEmpty) return null;
 
     final batch = _db.batch();
@@ -238,6 +238,23 @@ class FirebaseGangRepository {
     await _db.collection('gangs').doc(gangId).update({
       'themeId': themeId,
     });
+  }
+
+  Future<void> updateFavoriteChores({
+    required String gangId,
+    required List<String> favoriteChoreIds,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+    await _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('members')
+        .doc(user.uid)
+        .set(
+          {'favoriteChoreIds': favoriteChoreIds},
+          SetOptions(merge: true),
+        );
   }
 
   Future<void> deleteGang({required String gangId}) async {

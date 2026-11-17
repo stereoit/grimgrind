@@ -96,7 +96,7 @@ class PouchPage extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                title: Text(card.chore.title),
+                title: Text(s.choreTitle(card.chore)),
                 subtitle: Text(
                   DateFormat('d. M. • HH:mm').format(card.playedAt),
                 ),
@@ -119,7 +119,7 @@ class PouchPage extends StatelessWidget {
                   Icons.hourglass_top,
                   color: Color(0xFFC6A15B),
                 ),
-                title: Text(card.chore.title),
+                title: Text(s.choreTitle(card.chore)),
                 trailing: CoinAmount(
                   amount: card.coinsAwarded,
                   fontSize: 13,
@@ -230,7 +230,7 @@ class _PendingExchangeCard extends StatelessWidget {
               (c) => ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                title: Text(c.chore.title),
+                title: Text(s.choreTitle(c.chore)),
                 subtitle: CoinAmount(
                   amount: c.coinsAwarded,
                   fontSize: 12,

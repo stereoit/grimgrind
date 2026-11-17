@@ -89,12 +89,12 @@ void main() {
       );
 
       await tester.scrollUntilVisible(
-        find.text('TÉMA / MOTIV SÍDLA'),
+        find.text('MANSION THEME'),
         200,
         scrollable: find.byType(Scrollable).first,
       );
 
-      expect(find.text('TÉMA / MOTIV SÍDLA'), findsOneWidget);
+      expect(find.text('MANSION THEME'), findsOneWidget);
       expect(find.text('Gothic Mansion'), findsOneWidget);
     });
   });

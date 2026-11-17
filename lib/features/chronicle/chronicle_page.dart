@@ -68,6 +68,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final heat = entry.heatAtEvent ?? HeatLevel.coldAsh;
     final level = entry.levelAtEvent ?? MonthlyLevel.awakened;
     return Card(
@@ -156,7 +157,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        entry.title,
+                        s.feedCardPlayedTitle(entry),
                         style: const TextStyle(
                           fontSize: 22,
                           color: Color(0xFFE9E0D0),
@@ -170,7 +171,7 @@ class _ChroniclePlayedCardPost extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
             child: Text(
-              '${entry.actorNickname} ${entry.message}',
+              s.feedCardPlayedLine(entry),
               style: const TextStyle(color: Color(0xFFD5CCB8), height: 1.4),
             ),
           ),
@@ -187,6 +188,7 @@ class _ChronicleExchangePost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
@@ -213,9 +215,9 @@ class _ChronicleExchangePost extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'SCHVÁLENÁ SMĚNA RUKOU',
-                        style: TextStyle(
+                      Text(
+                        s.exchangeApprovedBanner,
+                        style: const TextStyle(
                           color: Color(0xFFC6A15B),
                           letterSpacing: 2,
                           fontSize: 10,
@@ -240,12 +242,14 @@ class _ChronicleExchangePost extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  entry.message,
+                  s.feedExchangeMessage(entry),
                   style: const TextStyle(height: 1.4),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Započteno do měsíčního Leaderboardu • ${DateFormat('d. M. • HH:mm').format(entry.createdAt)}',
+                  s.countedTowardLeaderboard(
+                    DateFormat('d. M. • HH:mm').format(entry.createdAt),
+                  ),
                   style: const TextStyle(
                     color: Color(0xFF968C80),
                     fontSize: 11,
@@ -267,6 +271,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     return Column(
       children: [
         Row(
@@ -275,7 +280,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text(
-                'UZÁVĚRKA OBDOBÍ • ${entry.monthKey}',
+                s.periodClosingBanner(entry.monthKey),
                 style: const TextStyle(
                   color: Color(0xFFC6A15B),
                   letterSpacing: 2,
@@ -318,7 +323,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
                       right: 16,
                       bottom: 12,
                       child: Text(
-                        entry.title,
+                        s.feedMonthTitle(entry),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           fontSize: 20,
@@ -332,7 +337,7 @@ class _ChronicleMonthDividerCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(
-                  entry.message,
+                  s.feedMonthMessage(entry),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.4),
                 ),

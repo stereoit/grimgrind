@@ -52,7 +52,7 @@ class _MansionPageState extends State<MansionPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.isCs ? 'Zrušit' : 'Cancel'),
+            child: Text(s.cancelBtn),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),

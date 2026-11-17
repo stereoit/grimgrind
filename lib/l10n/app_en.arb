@@ -1,0 +1,610 @@
+{
+  "@@locale": "en",
+  "navChronicle": "Chronicle",
+  "navPouch": "Pouch",
+  "navLeaderboard": "Leaderboard",
+  "navMansion": "Mansion",
+  "deckTitle": "Deck",
+  "playCardFab": "Play Card",
+  "skip": "Skip",
+  "nextRuleCard": "Next Rule Card",
+  "enterMansion": "Enter the Mansion",
+  "splashTagline": "THE MANSION & HOUSEHOLD GRIND",
+  "splashLoading": "SWEEPING COBWEBS FROM THE MANSION...",
+  "onboardingRule1Eyebrow": "RULE I • BOOK OF CARDS",
+  "onboardingRule1Title": "Shared Mansion Deck",
+  "onboardingRule1Text": "The entire household draws from the same book of 17 chores. No locking or waiting — as soon as you finish a chore, play the card straight into the Chronicle.",
+  "onboardingRule2Eyebrow": "RULE II • COINS, LEVEL & HEAT",
+  "onboardingRule2Title": "Blazing Reward Multipliers",
+  "onboardingRule2Text": "Play cards throughout the month to rise from Awakened to Godlike. Playing regularly stokes your Heat, which cools down when you slack off.",
+  "onboardingRule3Eyebrow": "RULE III • THE HAND & LEADERBOARD",
+  "onboardingRule3Title": "Exchange Pouch & Rule the Mansion",
+  "onboardingRule3Text": "Coins drop into your Pouch. Ask The Hand (Founder) to exchange them for real money anytime. Only approved exchanges count toward the Leaderboard!",
+  "authEyebrow": "MANSION GATE",
+  "authLoginTitle": "Sign In",
+  "authRegisterTitle": "Create Account",
+  "authEmailLabel": "Email",
+  "authPasswordLabel": "Password",
+  "authSignInBtn": "Enter the Mansion",
+  "authCreateAccountBtn": "Create Account",
+  "authVerifyingSeal": "Verifying seal...",
+  "authOr": "OR",
+  "authContinueGoogle": "Continue with Google",
+  "authContinueGuest": "Continue as Guest",
+  "authSubtitle": "Sign in to your household or create a new account.",
+  "authSignInTab": "Sign In",
+  "authRegisterTab": "Register",
+  "authFailedFallback": "Authentication failed.",
+  "authGoogleFailedFallback": "Google sign-in failed.",
+  "authFooterQuote": "“Whoever crosses the threshold without a seal becomes a mere shadow in the chronicle.”",
+  "sealSentEyebrow": "SEAL SENT",
+  "verifyEmailTitle": "Verify Your Email",
+  "verifyEmailBody": "We sent a verification link to {email}. Confirm it in your inbox — meanwhile you can continue into the Mansion.",
+  "@verifyEmailBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "continueToAvatar": "Continue to Avatar Creation",
+  "createAvatarEyebrow": "CREATE YOUR AVATAR",
+  "createAvatarHint": "Your Mansion nickname",
+  "continueToMansion": "Continue to Mansion",
+  "createAvatarTitle": "Your Dark Avatar",
+  "createAvatarSubtitle": "Choose your nickname and likeness for the Mansion chronicle.",
+  "createAvatarNicknameLabel": "Your dark nickname",
+  "nicknameExampleHint": "e.g. Shadow Master",
+  "gangSetupTitle": "Enter a Mansion",
+  "gangSetupCreateBtn": "Create Mansion & Become The Hand",
+  "gangSetupCreating": "Creating Mansion...",
+  "gangSetupJoinBtn": "Join Mansion",
+  "gangSetupJoining": "Joining...",
+  "gangSetupQuickStart": "Quick Start with Sample Mansion",
+  "gangSetupEyebrow": "CREATE OR JOIN",
+  "gangSetupSubtitle": "The founding member becomes The Hand (sets the Coin → CZK rate and approves exchanges) and invites others via an invite code.",
+  "defaultMansionName": "Addams Mansion",
+  "founderNicknameLabel": "Your nickname (Founder = The Hand)",
+  "starterFamilyTitle": "Add sample members & history",
+  "starterFamilySubtitle": "Ideal for trying out the Leaderboard and exchange approvals right away",
+  "mansionInviteCodeLabel": "Mansion Invite Code",
+  "inviteCodeExampleHint": "e.g. GRIM-42",
+  "feedEmptyTitle": "The Chronicle is Silent",
+  "feedEmptyText": "No cards played yet. The cobwebs await the first entry.",
+  "deckEyebrow": "MANSION BOOK OF CARDS",
+  "deckHeading": "Choose a completed card",
+  "deckBonusSummary": "Level {levelLabel} (+{levelPct}%) • {heatLabel} (+{heatPct}%) = +{totalPct}% total Coins.",
+  "@deckBonusSummary": {
+    "placeholders": {
+      "levelLabel": {
+        "type": "String"
+      },
+      "levelPct": {
+        "type": "int"
+      },
+      "heatLabel": {
+        "type": "String"
+      },
+      "heatPct": {
+        "type": "int"
+      },
+      "totalPct": {
+        "type": "int"
+      }
+    }
+  },
+  "deckAllFilter": "All ({count})",
+  "@deckAllFilter": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "difficultyEasy": "Easy",
+  "difficultyMedium": "Medium",
+  "difficultyHard": "Hard",
+  "difficultySpecial": "Special",
+  "levelAwakened": "Awakened",
+  "levelRestlessSpirit": "Restless Spirit",
+  "levelBloodthirsty": "Bloodthirsty",
+  "levelUnstoppable": "Unstoppable",
+  "levelGodlike": "Godlike",
+  "heatColdAsh": "Cold Ash",
+  "heatGlowingEmbers": "Glowing Embers",
+  "heatBlazingForge": "Blazing Forge",
+  "heatHellfire": "Hellfire",
+  "heatRuleColdAsh": "Default state or 4+ days break",
+  "heatRuleGlowingEmbers": "Min. 2 active days • keep: 1× per 3 days",
+  "heatRuleBlazingForge": "Min. 4 active days • keep: 1× per 3 days",
+  "heatRuleHellfire": "Min. 7 active days • keep: every day",
+  "estimateLabel": "ESTIMATE",
+  "difficultyStatLabel": "DIFFICULTY",
+  "pouchRewardLabel": "POUCH REWARD",
+  "playCardPrefix": "Play Card (+",
+  "cardPlayedSnackbar": "Played! +{coins} added to your Pouch.",
+  "@cardPlayedSnackbar": {
+    "placeholders": {
+      "coins": {
+        "type": "int"
+      }
+    }
+  },
+  "pouchEyebrow": "YOUR POUCH",
+  "pouchHeading": "Pouch & Hand Exchange",
+  "pouchEmpty": "Pouch is empty",
+  "requestExchangeBtn": "Request Hand Exchange ({count})",
+  "@requestExchangeBtn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exchangeRequestedSnackbar": "Exchange request for {totalCoins} coins sent to The Hand.",
+  "@exchangeRequestedSnackbar": {
+    "placeholders": {
+      "totalCoins": {
+        "type": "int"
+      }
+    }
+  },
+  "playedCardsInPouchSection": "PLAYED CARDS IN POUCH",
+  "pendingCardsSection": "MY CARDS AWAITING HAND APPROVAL",
+  "handManagementSection": "HAND MANAGEMENT (FOUNDER)",
+  "closeMonthBtn": "Close Month (Auto-Exchange & Winner)",
+  "monthClosedSnackbar": "Month closed! Generated {created} automatic exchange requests.",
+  "@monthClosedSnackbar": {
+    "placeholders": {
+      "created": {
+        "type": "int"
+      }
+    }
+  },
+  "noPendingExchanges": "No pending exchange requests",
+  "autoMonthEndLabel": "Automatic month-end closing",
+  "rejectCardTooltip": "Reject card",
+  "approveExchangeBtn": "Approve Exchange ({totalCoins})",
+  "@approveExchangeBtn": {
+    "placeholders": {
+      "totalCoins": {
+        "type": "int"
+      }
+    }
+  },
+  "leaderboardEyebrow": "MANSION HALL OF HEROES",
+  "leaderboardHeading": "Player Leaderboard",
+  "leaderboardSubtitle": "Only cards approved in a Hand Exchange count.",
+  "leaderboardStatTasks": "CHORES",
+  "leaderboardStatCoins": "COINS",
+  "leaderboardStatStreak": "STREAK",
+  "leaderboardStatTime": "TIME",
+  "inPouchWaitingPrefix": "Waiting in Pouch: {count} cards (",
+  "@inPouchWaitingPrefix": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inviteCodeLine": "Mansion invite code: {code}",
+  "@inviteCodeLine": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "accountLine": "Account: {email}",
+  "@accountLine": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "yourAvatarSection": "YOUR AVATAR",
+  "nicknameLabel": "Nickname",
+  "sexLabel": "Sex",
+  "myMansionsSection": "MY MANSIONS",
+  "createMansionBtn": "Create Mansion",
+  "joinMansionBtn": "Join Mansion",
+  "activeMansionBadge": "ACTIVE",
+  "inactiveBadge": "INACTIVE",
+  "membersCountLabel": "{count} Members",
+  "@membersCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "membersSectionTitle": "MEMBERS",
+  "setActiveMansionBtn": "Set as Active Mansion",
+  "leaveMansionBtn": "Leave Mansion",
+  "leaveMansionConfirmTitle": "Leave Mansion?",
+  "leaveMansionConfirmBody": "Are you sure you want to leave \"{name}\"? You will need an invite code to rejoin.",
+  "@leaveMansionConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteMansionBtn": "Delete Mansion",
+  "deleteMansionConfirmTitle": "Delete Mansion?",
+  "myGangsBtn": "My Mansions",
+  "inviteManageBtn": "Invite / Manage",
+  "switchMemberSection": "SWITCH MEMBER (TEST / HOUSEHOLD)",
+  "roleHandSubtitle": "Founder • The Hand",
+  "roleMemberSubtitle": "Mansion Member",
+  "renameNicknameLabel": "Change my nickname",
+  "saveBtn": "Save",
+  "avatarSavedSnackbar": "Avatar saved.",
+  "logoutBtn": "Log Out",
+  "logoutConfirmTitle": "Log Out?",
+  "logoutConfirmBody": "You will be signed out of your account and returned to the sign-in screen.",
+  "logoutConfirmBodyEmail": "Sign out of {email} and return to the sign-in screen?",
+  "@logoutConfirmBodyEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "appUpdatesTitle": "App Updates",
+  "checkNewVersion": "Check for new version",
+  "currentVersionLine": "Current version {version} (#{build})",
+  "@currentVersionLine": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "int"
+      }
+    }
+  },
+  "latestVersionSnackbar": "You have the latest available version.",
+  "newVersionTitle": "New version {version} (#{build})",
+  "@newVersionTitle": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "int"
+      }
+    }
+  },
+  "updateLaterBtn": "Later",
+  "updateNowBtn": "Update",
+  "choreTrashTitle": "Take Out the Trash",
+  "choreShoppingTitle": "Unpack Groceries",
+  "choreDishwasherTitle": "Empty the Dishwasher",
+  "choreLaundryTitle": "Put Away Laundry",
+  "choreStairsTitle": "Vacuum the Stairs",
+  "choreQueenieTitle": "Brush Queenie",
+  "choreToiletTitle": "Clean the Toilet",
+  "choreDogsTitle": "Prepare Dog Food",
+  "choreDogsNote": "Including feeding",
+  "choreSportTitle": "Sports Activity",
+  "choreGardenTitle": "Water the Garden",
+  "choreGardenNote": "Care for plants & carnivorous flora",
+  "choreEveningTitle": "Evening Tidy-Up",
+  "choreEveningNote": "Kitchen, hallway, and living room",
+  "choreBathroomTitle": "Clean the Bathroom",
+  "choreMopTitle": "Steam Mop the Floors",
+  "choreIroningTitle": "Ironing",
+  "choreCookingTitle": "Cook a Meal",
+  "choreSchoolTitle": "Study / Schoolwork",
+  "choreRoomTitle": "Deep-Clean Bedroom",
+  "choreRoomNote": "Major deep clean",
+  "sexMale": "Male",
+  "sexFemale": "Female",
+  "sexNeutral": "Neutral",
+  "periodCurrentMonth": "This Month",
+  "periodPreviousMonth": "Last Month",
+  "periodAllTime": "Hall of Fame",
+  "sortMostActive": "Most Active",
+  "sortMostHardWorking": "Most Hard Working",
+  "sortByStreakLevel": "By Streak Level",
+  "themeGothicSubtitle": "Dark Victorian mansion, engravings, and The Hand",
+  "exchangeApprovedBanner": "EXCHANGE APPROVED BY THE HAND",
+  "countedTowardLeaderboard": "Counted toward monthly Leaderboard • {formattedDate}",
+  "@countedTowardLeaderboard": {
+    "placeholders": {
+      "formattedDate": {
+        "type": "String"
+      }
+    }
+  },
+  "periodClosingBanner": "PERIOD CLOSING • {monthKey}",
+  "@periodClosingBanner": {
+    "placeholders": {
+      "monthKey": {
+        "type": "String"
+      }
+    }
+  },
+  "feedCardPlayedLine": "{actor} played \"{choreName}\" and stored {coins} Coins in the Pouch.",
+  "@feedCardPlayedLine": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "choreName": {
+        "type": "String"
+      },
+      "coins": {
+        "type": "int"
+      }
+    }
+  },
+  "feedExchangeMessage": "{actor} exchanged {cardCount} cards for {coins} Coins{czkPart}.",
+  "@feedExchangeMessage": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      },
+      "cardCount": {
+        "type": "int"
+      },
+      "coins": {
+        "type": "int"
+      },
+      "czkPart": {
+        "type": "String"
+      }
+    }
+  },
+  "feedMonthTitle": "Monthly Proclamation • {monthKey}",
+  "@feedMonthTitle": {
+    "placeholders": {
+      "monthKey": {
+        "type": "String"
+      }
+    }
+  },
+  "feedMonthClosedNoWinner": "Month {monthKey} has closed. Monthly levels reset to Awakened for the new month.",
+  "@feedMonthClosedNoWinner": {
+    "placeholders": {
+      "monthKey": {
+        "type": "String"
+      }
+    }
+  },
+  "feedMonthClosedWinner": "{winner} became Ruler of {monthKey} ({coins} Coins, {cardCount} chores).",
+  "@feedMonthClosedWinner": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "monthKey": {
+        "type": "String"
+      },
+      "coins": {
+        "type": "int"
+      },
+      "cardCount": {
+        "type": "int"
+      }
+    }
+  },
+  "feedMonthClosedWinnerNoCount": "{winner} became Ruler of {monthKey} ({coins} Coins).",
+  "@feedMonthClosedWinnerNoCount": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "monthKey": {
+        "type": "String"
+      },
+      "coins": {
+        "type": "int"
+      }
+    }
+  },
+  "sexSelectorLabel": "SEX (FOR CHRONICLE WORDING)",
+  "joinFellowshipEyebrow": "ENTER THE FELLOWSHIP",
+  "acceptInviteTitle": "Accept Mansion Invite",
+  "acceptInviteSubtitle": "Verify the gate code and sign your name in the ledger.",
+  "inviteForGang": "Invite to: {name}",
+  "@inviteForGang": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "existingMembersCount": "{count} existing members",
+  "@existingMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inviteCodeOrLinkLabel": "Invite code or link",
+  "nicknameInMansionLabel": "Your nickname in this Mansion",
+  "cancelBtn": "Cancel",
+  "joiningBtn": "Joining...",
+  "joinBtn": "Join",
+  "invalidInviteCodeError": "Invalid Mansion invite code.",
+  "createMansionCharterEyebrow": "MANSION FOUNDING CHARTER",
+  "createNewMansionTitle": "Create New Mansion",
+  "createNewMansionSubtitle": "Found a new mansion estate. You become The Hand and master of the treasury rules.",
+  "mansionNameLabel": "Mansion Name",
+  "mansionNameHint": "e.g. Raven Manor",
+  "founderHandNicknameLabel": "Your nickname (The Hand)",
+  "creatingBtn": "Creating...",
+  "createBtn": "Create",
+  "createMansionFailedError": "Failed to create Mansion.",
+  "mansionsManagementEyebrow": "MANSION MANAGEMENT",
+  "acceptCodeBtn": "Enter Code",
+  "manageBtn": "Manage",
+  "fellowshipsOverview": "MANSIONS OVERVIEW ({count})",
+  "@fellowshipsOverview": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noMansionsYet": "You are not a member of any Mansion yet.",
+  "canonQuote": "“A fellowship without a steadfast manor is merely a band of wanderers in the gale. The Hand rules where the seal keeps the word.”",
+  "canonAttribution": "— CANON OF THE ORDER OF RAVENS",
+  "standbyBadge": "STANDBY",
+  "roleHandOwnerBadge": "THE HAND (OWNER)",
+  "roleMemberBadge": "MEMBER",
+  "ownerBadge": "OWNER",
+  "nicknameLine": "Nickname: {nickname}",
+  "@nicknameLine": {
+    "placeholders": {
+      "nickname": {
+        "type": "String"
+      }
+    }
+  },
+  "inviteCodePrefix": "Invite code: ",
+  "exchangeRateLine": "Rate: {coinsPerCzk} Coins = 1 CZK",
+  "@exchangeRateLine": {
+    "placeholders": {
+      "coinsPerCzk": {
+        "type": "int"
+      }
+    }
+  },
+  "mansionDeletedSnackbar": "Mansion deleted.",
+  "mansionWasDeleted": "Mansion was deleted.",
+  "shareInviteMessage": "Join my Mansion \"{name}\" on GrimGrind! Open link: {url} (or enter code {code}).",
+  "@shareInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "manageAndInvitesTitle": "Manage & Invites",
+  "roleHandShort": "THE HAND",
+  "inviteFriendsSection": "INVITE FRIENDS (IM LINK)",
+  "uniqueInviteCodeLabel": "UNIQUE INVITE CODE",
+  "inviteLinkCopiedSnackbar": "Invite link copied to share in chat.",
+  "copyInviteLinkBtn": "Copy Invite Link to Share",
+  "newInviteCodeSnackbar": "New invite code: {code}",
+  "@newInviteCodeSnackbar": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "regenerateInviteCodeBtn": "Regenerate Invite Code",
+  "dangerZoneEyebrow": "DANGER ZONE",
+  "deleteMansionWarning": "Deleting the Mansion permanently removes the entire estate, chronicle, Pouch cards, and all members. This action cannot be undone.",
+  "finalDecisionEyebrow": "FINAL DECISION",
+  "deleteMansionConfirmPrompt": "This permanently deletes \"{name}\" including all cards and history. Type the exact Mansion name to confirm:",
+  "@deleteMansionConfirmPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "typeExactNameLabel": "Type: {name}",
+  "@typeExactNameLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keepMansionBtn": "Keep Mansion",
+  "deleteForeverBtn": "Delete Forever",
+  "themeSectionTitle": "MANSION THEME",
+  "handOnlyLabel": "THE HAND ONLY",
+  "readOnlyLabel": "READ ONLY",
+  "themeOwnerHint": "The owner can choose a theme package for a new period. Default theme is Gothic Mansion.",
+  "themeMemberHint": "Active theme set by the Mansion owner.",
+  "defaultShadowMansionName": "Shadow Mansion",
+  "defaultMansionFallbackName": "Mansion",
+  "sampleQueenNickname": "Mansion Queen",
+  "errorSignInFailed": "Sign-in failed: {error}",
+  "@errorSignInFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorInvalidEmailPassword": "Enter a valid email and password (min. 6 characters).",
+  "errorRegistrationFailed": "Registration failed: {error}",
+  "@errorRegistrationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorGoogleSignInCancelled": "Google sign-in was cancelled or failed.",
+  "errorGoogleSignInFailed": "Google sign-in failed: {error}",
+  "@errorGoogleSignInFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorAnonymousSignInFailed": "Anonymous sign-in failed.",
+  "errorAnonymousSignInException": "Anonymous sign-in failed: {error}",
+  "@errorAnonymousSignInException": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorSignInFirst": "Please sign in first.",
+  "errorAccountRequiredToCreate": "Sign in with an account to create a Mansion.",
+  "errorCreateMansionServer": "Failed to create Mansion on server.",
+  "errorCreateMansionException": "Error creating Mansion: {error}",
+  "@errorCreateMansionException": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "errorEnterInviteCode": "Enter Mansion invite code.",
+  "errorAccountRequiredToJoin": "Sign in with an account to join a Mansion.",
+  "errorInviteNotFound": "Invite code {code} not found.",
+  "@errorInviteNotFound": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errorLoadMansionFailed": "Could not load Mansion for code {code}.",
+  "@errorLoadMansionFailed": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errorJoinMansionException": "Error joining Mansion: {error}",
+  "@errorJoinMansionException": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
+}

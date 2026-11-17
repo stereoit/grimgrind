@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_strings.dart';
 import '../../mansion_store.dart';
 import '../../sound_service.dart';
 
@@ -18,6 +19,7 @@ class EmailVerificationNoticeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final email = store.pendingVerificationEmail ?? '';
     return Scaffold(
       backgroundColor: _voidBg,
@@ -42,10 +44,10 @@ class EmailVerificationNoticeScreen extends StatelessWidget {
                     size: 44,
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    'PEČEŤ ODESLÁNA',
+                  Text(
+                    s.sealSentEyebrow,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: _goldAccent,
                       fontSize: 11,
                       letterSpacing: 2.6,
@@ -54,7 +56,7 @@ class EmailVerificationNoticeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Zkontroluj svůj e-mail',
+                    s.verifyEmailTitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: _boneText,
@@ -63,7 +65,7 @@ class EmailVerificationNoticeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Na adresu $email jsme odeslali ověřovací odkaz. Potvrď ho ve své schránce, a mezitím můžeš pokračovat do Sídla.',
+                    s.verifyEmailBody(email),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: _mutedStone, fontSize: 13),
                   ),
@@ -82,7 +84,7 @@ class EmailVerificationNoticeScreen extends StatelessWidget {
                       store.acknowledgeVerificationEmail,
                     ),
                     icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: const Text('Pokračovat k tvorbě avatara'),
+                    label: Text(s.continueToAvatar),
                   ),
                 ],
               ),

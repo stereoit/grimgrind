@@ -39,6 +39,30 @@ void main() {
       expect(find.text('Mansion'), findsOneWidget);
       expect(find.text('Play Card'), findsOneWidget);
 
+      // Chronicle feed entries should be in English.
+      await tester.scrollUntilVisible(
+        find.text('EXCHANGE APPROVED BY THE HAND'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('EXCHANGE APPROVED BY THE HAND'), findsOneWidget);
+
+      // Deck should show English chore titles.
+      await tester.tap(find.text('Play Card'));
+      await tester.pumpAndSettle();
+      expect(find.text('Choose a completed card'), findsOneWidget);
+      expect(find.text('Unpack Groceries'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      // Leaderboard should show English stats and period labels.
+      await tester.tap(find.text('Leaderboard'));
+      await tester.pumpAndSettle();
+      expect(find.text('This Month'), findsOneWidget);
+      expect(find.text('CHORES'), findsWidgets);
+      expect(find.text('COINS'), findsWidgets);
+      expect(find.text('TIME'), findsWidgets);
+
       await tester.tap(find.text('Pouch'));
       await tester.pumpAndSettle();
       expect(find.text('Pouch & Hand Exchange'), findsOneWidget);

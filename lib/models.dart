@@ -264,7 +264,8 @@ class GangMember {
     this.sex = MemberSex.male,
     this.heatPeakDays = 0,
     this.lastActiveDay,
-  });
+    Set<String>? favoriteChoreIds,
+  }) : favoriteChoreIds = favoriteChoreIds ?? <String>{};
 
   final String id;
   String nickname;
@@ -274,6 +275,9 @@ class GangMember {
   /// Accumulated streak days used for heating up / cooling down.
   int heatPeakDays;
   DateTime? lastActiveDay;
+
+  /// Chore IDs marked as favorite by this member.
+  final Set<String> favoriteChoreIds;
 }
 
 class Gang {

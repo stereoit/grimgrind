@@ -6,6 +6,7 @@ import 'app_strings.dart';
 import 'features/mansion/mansion_shell.dart';
 import 'features/onboarding/onboarding_flow.dart';
 import 'features/onboarding/splash_screen.dart';
+import 'l10n/app_localizations.dart';
 import 'mansion_store.dart';
 import 'sound_service.dart';
 import 'theme_package.dart';
@@ -73,6 +74,7 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
             supportedLocales: AppStrings.supportedLocales,
             localeResolutionCallback: AppStrings.resolveLocale,
             localizationsDelegates: const [
+              AppLocalizations.delegate,
               AppStrings.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,

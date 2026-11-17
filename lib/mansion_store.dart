@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'app_strings.dart';
 import 'firebase_gang_repository.dart';
+import 'l10n/app_localizations.dart';
 import 'models.dart';
 import 'theme_package.dart';
 
@@ -73,6 +75,13 @@ class MansionStore extends ChangeNotifier {
     }
     return null;
   }
+
+  AppLocalizations get _l10n => lookupAppLocalizations(
+    AppStrings.resolveLocale(
+      PlatformDispatcher.instance.locale,
+      AppStrings.supportedLocales,
+    ),
+  );
 
   List<Gang> get myGangs => _workspaces.map((w) => w.gang).toList();
 
@@ -230,7 +239,7 @@ class MansionStore extends ChangeNotifier {
     bool includeStarterFamily = false,
   }) {
     final cleanGang = gangName.trim().isEmpty
-        ? 'Sídlo stínů'
+        ? _l10n.defaultShadowMansionName
         : gangName.trim();
     final cleanNick = founderNickname.trim().isEmpty
         ? 'Dark Lord'
@@ -449,7 +458,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Přihlášení selhalo: $e';
+      lastSyncError = _l10n.errorSignInFailed('$e');
       return false;
     }
   }
@@ -461,7 +470,7 @@ class MansionStore extends ChangeNotifier {
     lastSyncError = null;
     final cleanEmail = email.trim();
     if (cleanEmail.isEmpty || password.length < 6) {
-      lastSyncError = 'Zadej platný e-mail a heslo (min. 6 znaků).';
+      lastSyncError = _l10n.errorInvalidEmailPassword;
       return false;
     }
     if (!isFirebaseReady) {
@@ -485,7 +494,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Registrace selhala: $e';
+      lastSyncError = _l10n.errorRegistrationFailed('$e');
       return false;
     }
   }
@@ -508,7 +517,7 @@ class MansionStore extends ChangeNotifier {
     try {
       final cred = await _gangRepo.signInWithGoogle();
       if (cred?.user == null) {
-        lastSyncError = 'Přihlášení přes Google bylo zrušeno nebo selhalo.';
+        lastSyncError = _l10n.errorGoogleSignInCancelled;
         return false;
       }
       isSignedIn = true;
@@ -518,7 +527,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Přihlášení přes Google selhalo: $e';
+      lastSyncError = _l10n.errorGoogleSignInFailed('$e');
       return false;
     }
   }
@@ -535,7 +544,7 @@ class MansionStore extends ChangeNotifier {
     try {
       final user = await _gangRepo.ensureSignedIn();
       if (user == null) {
-        lastSyncError = 'Anonymní přihlášení se nezdařilo.';
+        lastSyncError = _l10n.errorAnonymousSignInFailed;
         return false;
       }
       isSignedIn = true;
@@ -545,7 +554,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Anonymní přihlášení selhalo: $e';
+      lastSyncError = _l10n.errorAnonymousSignInException('$e');
       return false;
     }
   }
@@ -621,11 +630,11 @@ class MansionStore extends ChangeNotifier {
   }) async {
     lastSyncError = null;
     if (!isSignedIn) {
-      lastSyncError = 'Nejprve se prosím přihlas.';
+      lastSyncError = _l10n.errorSignInFirst;
       return false;
     }
     final cleanGang = gangName.trim().isEmpty
-        ? 'Sídlo stínů'
+        ? _l10n.defaultShadowMansionName
         : gangName.trim();
     final cleanNick = founderNickname.trim().isEmpty
         ? 'Dark Lord'
@@ -648,7 +657,7 @@ class MansionStore extends ChangeNotifier {
     try {
       final user = _gangRepo.currentUser;
       if (user == null || user.isAnonymous) {
-        lastSyncError = 'Pro založení Sídla se musíš přihlásit účtem.';
+        lastSyncError = _l10n.errorAccountRequiredToCreate;
         return false;
       }
       final inviteCode = _generateInviteCode(_clock());
@@ -661,7 +670,7 @@ class MansionStore extends ChangeNotifier {
         themeId: resolvedThemeId,
       );
       if (gangId == null) {
-        lastSyncError = 'Nepodařilo se založit Gang na serveru.';
+        lastSyncError = _l10n.errorCreateMansionServer;
         return false;
       }
 
@@ -694,7 +703,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Chyba při zakládání Gangu: $e';
+      lastSyncError = _l10n.errorCreateMansionException('$e');
       return false;
     }
   }
@@ -706,13 +715,13 @@ class MansionStore extends ChangeNotifier {
   }) async {
     lastSyncError = null;
     if (!isSignedIn) {
-      lastSyncError = 'Nejprve se prosím přihlas.';
+      lastSyncError = _l10n.errorSignInFirst;
       return false;
     }
     final cleanCode = inviteCode.trim().toUpperCase();
     final cleanNick = nickname.trim().isEmpty ? 'Shadow' : nickname.trim();
     if (cleanCode.isEmpty) {
-      lastSyncError = 'Zadej zvací kód Gangu.';
+      lastSyncError = _l10n.errorEnterInviteCode;
       return false;
     }
 
@@ -740,7 +749,7 @@ class MansionStore extends ChangeNotifier {
     try {
       final user = _gangRepo.currentUser;
       if (user == null || user.isAnonymous) {
-        lastSyncError = 'Pro vstup do Sídla se musíš přihlásit účtem.';
+        lastSyncError = _l10n.errorAccountRequiredToJoin;
         return false;
       }
 
@@ -750,13 +759,13 @@ class MansionStore extends ChangeNotifier {
         sex: sex,
       );
       if (gangId == null) {
-        lastSyncError = 'Pozvánka s kódem $cleanCode nebyla nalezena.';
+        lastSyncError = _l10n.errorInviteNotFound(cleanCode);
         return false;
       }
 
       final gangData = await _gangRepo.fetchGang(gangId);
       if (gangData == null) {
-        lastSyncError = 'Gang pro kód $cleanCode se nepodařilo načíst.';
+        lastSyncError = _l10n.errorLoadMansionFailed(cleanCode);
         return false;
       }
       final membersData = await _gangRepo.fetchGangMembers(gangId);
@@ -772,7 +781,7 @@ class MansionStore extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      lastSyncError = 'Chyba při připojování ke Gangu: $e';
+      lastSyncError = _l10n.errorJoinMansionException('$e');
       return false;
     }
   }
@@ -785,7 +794,7 @@ class MansionStore extends ChangeNotifier {
   }) {
     final gang = Gang(
       id: gangId,
-      name: (gangData['name'] as String?) ?? 'Sídlo',
+      name: (gangData['name'] as String?) ?? _l10n.defaultMansionFallbackName,
       inviteCode: (gangData['inviteCode'] as String?) ?? '',
       founderId: (gangData['founderId'] as String?) ?? '',
       coinsPerCzk: (gangData['coinsPerCzk'] as num?)?.toInt() ?? 10,
@@ -798,12 +807,17 @@ class MansionStore extends ChangeNotifier {
         (s) => s.name == sexName,
         orElse: () => MemberSex.male,
       );
+      final rawFavorites = m['favoriteChoreIds'];
+      final favoriteChoreIds = rawFavorites is Iterable
+          ? rawFavorites.whereType<String>().toSet()
+          : <String>{};
       return GangMember(
         id: (m['id'] as String?) ?? '',
         nickname: (m['nickname'] as String?) ?? 'Shadow',
         isHand: (m['isHand'] as bool?) ?? false,
         sex: sex,
         heatPeakDays: (m['heatPeakDays'] as num?)?.toInt() ?? 0,
+        favoriteChoreIds: favoriteChoreIds,
       );
     }).toList();
 
@@ -914,6 +928,32 @@ class MansionStore extends ChangeNotifier {
       }
     }
     return false;
+  }
+
+  bool isFavoriteChore(String choreId) {
+    final member = currentMember;
+    if (member == null) return false;
+    return member.favoriteChoreIds.contains(choreId);
+  }
+
+  void toggleFavoriteChore(String choreId) {
+    final member = currentMember;
+    final currentGang = gang;
+    if (member == null || currentGang == null) return;
+    if (!member.favoriteChoreIds.add(choreId)) {
+      member.favoriteChoreIds.remove(choreId);
+    }
+    if (isFirebaseReady) {
+      unawaited(
+        _gangRepo
+            .updateFavoriteChores(
+              gangId: currentGang.id,
+              favoriteChoreIds: member.favoriteChoreIds.toList(),
+            )
+            .catchError((_) {}),
+      );
+    }
+    notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -1356,7 +1396,7 @@ class MansionStore extends ChangeNotifier {
 
     final demoGang = Gang(
       id: 'gang-demo',
-      name: 'Sídlo Addamsů',
+      name: _l10n.defaultMansionName,
       inviteCode: overrideInviteCode ?? 'GRIM-42',
       founderId: founder.id,
       coinsPerCzk: 10,
@@ -1386,7 +1426,7 @@ class MansionStore extends ChangeNotifier {
 
     final queen = GangMember(
       id: _nextId('member'),
-      nickname: 'Královna sídla',
+      nickname: _l10n.sampleQueenNickname,
       isHand: false,
       sex: MemberSex.female,
       heatPeakDays: 7,
