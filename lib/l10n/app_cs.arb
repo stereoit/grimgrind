@@ -253,7 +253,7 @@
   "errorSignInFailed": "Přihlášení selhalo: {error}",
   "errorInvalidEmailPassword": "Zadej platný e-mail a heslo (min. 6 znaků).",
   "errorRegistrationFailed": "Registrace selhala: {error}",
-  "errorGoogleSignInCancelled": "Přihlášení přes Google bylo zrušeno nebo selhalo.",
+  "errorGoogleSignInCancelled": "Uživatel zrušil",
   "errorGoogleSignInFailed": "Přihlášení přes Google selhalo: {error}",
   "errorAnonymousSignInFailed": "Anonymní přihlášení se nezdařilo.",
   "errorAnonymousSignInException": "Anonymní přihlášení selhalo: {error}",

@@ -73,19 +73,35 @@ class FirebaseGangRepository {
   Future<UserCredential?> signInWithGoogle() async {
     if (!isFirebaseReady) return null;
     if (kIsWeb) {
-      return _firebaseAuth.signInWithProvider(GoogleAuthProvider());
+      try {
+        return await _firebaseAuth.signInWithProvider(GoogleAuthProvider());
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'popup-closed-by-user' ||
+            e.code == 'cancelled-popup-request' ||
+            e.code == 'user-cancelled') {
+          return null;
+        }
+        rethrow;
+      }
     }
     await _ensureGoogleSignInInitialized();
-    final googleUser = await GoogleSignIn.instance.authenticate();
-    final idToken = googleUser.authentication.idToken;
-    if (idToken == null) {
-      throw FirebaseAuthException(
-        code: 'missing-google-id-token',
-        message: 'Google Sign-In did not return an ID token.',
-      );
+    try {
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final idToken = googleUser.authentication.idToken;
+      if (idToken == null) {
+        throw FirebaseAuthException(
+          code: 'missing-google-id-token',
+          message: 'Google Sign-In did not return an ID token.',
+        );
+      }
+      final credential = GoogleAuthProvider.credential(idToken: idToken);
+      return await _firebaseAuth.signInWithCredential(credential);
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return null;
+      }
+      rethrow;
     }
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    return _firebaseAuth.signInWithCredential(credential);
   }
 
   Future<void> signOut() async {

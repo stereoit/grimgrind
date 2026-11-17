@@ -552,7 +552,7 @@
       }
     }
   },
-  "errorGoogleSignInCancelled": "Google sign-in was cancelled or failed.",
+  "errorGoogleSignInCancelled": "User canceled",
   "errorGoogleSignInFailed": "Google sign-in failed: {error}",
   "@errorGoogleSignInFailed": {
     "placeholders": {

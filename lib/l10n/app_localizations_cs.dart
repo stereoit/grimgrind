@@ -877,8 +877,7 @@ class AppLocalizationsCs extends AppLocalizations {
   }
 
   @override
-  String get errorGoogleSignInCancelled =>
-      'Přihlášení přes Google bylo zrušeno nebo selhalo.';
+  String get errorGoogleSignInCancelled => 'Uživatel zrušil';
 
   @override
   String errorGoogleSignInFailed(String error) {

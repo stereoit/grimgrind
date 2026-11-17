@@ -877,8 +877,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get errorGoogleSignInCancelled =>
-      'Google sign-in was cancelled or failed.';
+  String get errorGoogleSignInCancelled => 'User canceled';
 
   @override
   String errorGoogleSignInFailed(String error) {
