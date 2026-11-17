@@ -39,6 +39,33 @@ class _MansionPageState extends State<MansionPage> {
     super.dispose();
   }
 
+  Future<void> _confirmLogout(BuildContext context, MansionStore store) async {
+    final s = AppStrings.of(context);
+    final email = store.authUserEmail;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.logoutConfirmTitle),
+        content: Text(
+          email != null ? s.logoutConfirmBodyEmail(email) : s.logoutConfirmBody,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.isCs ? 'Zrušit' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.logoutBtn),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await store.signOutAsync();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
@@ -102,21 +129,33 @@ class _MansionPageState extends State<MansionPage> {
                 onChanged: (sex) => setState(() => _selectedSex = sex),
               ),
               const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: withButtonSound(() {
-                    store.updateCurrentAvatar(
-                      nickname: _renameController.text,
-                      sex: _selectedSex,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s.avatarSavedSnackbar)),
-                    );
-                  }),
-                  icon: const Icon(Icons.save_outlined, size: 17),
-                  label: Text(s.saveBtn),
-                ),
+              Row(
+                mainAxisAlignment: store.isSignedIn
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.end,
+                children: [
+                  if (store.isSignedIn)
+                    OutlinedButton.icon(
+                      onPressed: withButtonSound(
+                        () => _confirmLogout(context, store),
+                      ),
+                      icon: const Icon(Icons.logout, size: 17),
+                      label: Text(s.logoutBtn),
+                    ),
+                  FilledButton.icon(
+                    onPressed: withButtonSound(() {
+                      store.updateCurrentAvatar(
+                        nickname: _renameController.text,
+                        sex: _selectedSex,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(s.avatarSavedSnackbar)),
+                      );
+                    }),
+                    icon: const Icon(Icons.save_outlined, size: 17),
+                    label: Text(s.saveBtn),
+                  ),
+                ],
               ),
             ],
           ),

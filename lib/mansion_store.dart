@@ -556,6 +556,25 @@ class MansionStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> signOutAsync() async {
+    lastSyncError = null;
+    try {
+      await _gangRepo.signOut();
+    } catch (_) {
+      // Clear local session state even if remote sign-out fails offline.
+    }
+    isSignedIn = false;
+    isAnonymousAuth = false;
+    authUserEmail = null;
+    pendingVerificationEmail = null;
+    avatarNickname = null;
+    avatarSex = MemberSex.male;
+    pendingInviteCode = null;
+    _workspaces.clear();
+    _activeGangId = null;
+    notifyListeners();
+  }
+
   Future<void> syncFromFirebase() async {
     if (!isFirebaseReady) return;
     try {

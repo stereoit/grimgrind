@@ -270,5 +270,70 @@ void main() {
       expect(store.myGangs, hasLength(1));
       expect(store.gang!.name, 'Second Manor');
     });
+
+    testWidgets('Mansion tab shows Log Out when signed in and returns to AuthGateScreen', (
+      tester,
+    ) async {
+      tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      final store = MansionStore(clock: () => DateTime(2026, 8, 10, 12, 0));
+      await store.signInWithEmailAsync(
+        email: 'morticia@addams.local',
+        password: 'password123',
+      );
+      store.createGang(gangName: 'Addams Manor', founderNickname: 'Morticia');
+
+      await tester.pumpWidget(GrimGrindApp(store: store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Mansion'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('morticia@addams.local'), findsOneWidget);
+      expect(find.text('Log Out'), findsOneWidget);
+
+      await tester.tap(find.text('Log Out'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Log Out?'), findsOneWidget);
+      await tester.tap(find.text('Log Out').last);
+      await tester.pumpAndSettle();
+
+      expect(store.isSignedIn, isFalse);
+      expect(store.authUserEmail, isNull);
+      expect(store.myGangs, isEmpty);
+      expect(store.isReady, isFalse);
+      expect(find.text('MANSION GATE'), findsOneWidget);
+    });
+
+    testWidgets('Mansion tab hides Log Out when not signed in', (
+      tester,
+    ) async {
+      tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      final store = MansionStore(
+        seedDemo: true,
+        clock: () => DateTime(2026, 8, 10, 12, 0),
+      );
+
+      await tester.pumpWidget(GrimGrindApp(store: store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Mansion'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(store.isSignedIn, isFalse);
+      expect(find.text('Log Out'), findsNothing);
+    });
   });
 }

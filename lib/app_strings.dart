@@ -296,6 +296,14 @@ class AppStrings {
   String get saveBtn => isCs ? 'Uložit' : 'Save';
   String get avatarSavedSnackbar =>
       isCs ? 'Avatar uložen.' : 'Avatar saved.';
+  String get logoutBtn => isCs ? 'Odhlásit se' : 'Log Out';
+  String get logoutConfirmTitle => isCs ? 'Odhlásit se?' : 'Log Out?';
+  String get logoutConfirmBody => isCs
+      ? 'Budeš odhlášen ze svého účtu a přesměrován na přihlášení.'
+      : 'You will be signed out of your account and returned to the sign-in screen.';
+  String logoutConfirmBodyEmail(String email) => isCs
+      ? 'Odhlásit se z účtu $email a vrátit se na přihlášení?'
+      : 'Sign out of $email and return to the sign-in screen?';
   String get appUpdatesTitle =>
       isCs ? 'Aktualizace aplikace' : 'App Updates';
   String get checkNewVersion =>
