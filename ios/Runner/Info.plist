@@ -33,9 +33,12 @@
 				<array>
 					<string>grimgrind</string>
 					<string>app-1-42872380886-ios-ecac96cea9cc10ff1e9877</string>
+					<string>com.googleusercontent.apps.42872380886-khqphq7njtudmg0sf61plqc47a3sspbd</string>
 				</array>
 			</dict>
 		</array>
+		<key>GIDClientID</key>
+		<string>42872380886-khqphq7njtudmg0sf61plqc47a3sspbd.apps.googleusercontent.com</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>FlutterDeepLinkingEnabled</key>
