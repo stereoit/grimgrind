@@ -123,6 +123,15 @@ jobs:
           else
             echo "ANDROID_KEYSTORE_BASE64 not set; falling back to debug signing config."
           fi
+      - name: Restore google-services.json (if configured)
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          else
+            echo "GOOGLE_SERVICES_JSON_BASE64 not set; building without google-services.json."
+          fi
       - name: Build APK
         run: |
           flutter build apk --release --target-platform android-arm64 --build-number "${GITHUB_RUN_NUMBER}"
