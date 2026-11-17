@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'models.dart';
 
@@ -17,6 +19,7 @@ class FirebaseGangRepository {
 
   final FirebaseAuth? _auth;
   final FirebaseFirestore? _firestore;
+  bool _googleSignInInitialized = false;
 
   bool get isFirebaseReady => Firebase.apps.isNotEmpty;
 
@@ -61,13 +64,35 @@ class FirebaseGangRepository {
     return cred;
   }
 
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInInitialized) return;
+    await GoogleSignIn.instance.initialize();
+    _googleSignInInitialized = true;
+  }
+
   Future<UserCredential?> signInWithGoogle() async {
     if (!isFirebaseReady) return null;
-    return _firebaseAuth.signInWithProvider(GoogleAuthProvider());
+    if (kIsWeb) {
+      return _firebaseAuth.signInWithProvider(GoogleAuthProvider());
+    }
+    await _ensureGoogleSignInInitialized();
+    final googleUser = await GoogleSignIn.instance.authenticate();
+    final idToken = googleUser.authentication.idToken;
+    if (idToken == null) {
+      throw FirebaseAuthException(
+        code: 'missing-google-id-token',
+        message: 'Google Sign-In nevrátil ID token.',
+      );
+    }
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+    return _firebaseAuth.signInWithCredential(credential);
   }
 
   Future<void> signOut() async {
     if (!isFirebaseReady) return;
+    if (!kIsWeb && _googleSignInInitialized) {
+      await GoogleSignIn.instance.signOut();
+    }
     await _firebaseAuth.signOut();
   }
 
