@@ -26,6 +26,7 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
   bool _isRegisterMode = false;
   bool _obscurePassword = true;
   bool _isSubmitting = false;
+  bool _isSubmittingGoogle = false;
   String? _errorText;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -63,32 +64,22 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isSubmitting = true;
+      _isSubmittingGoogle = true;
       _errorText = null;
     });
     final ok = await widget.store.signInWithGoogleAsync();
     if (!mounted) return;
     if (!ok) {
+      final msg =
+          widget.store.lastSyncError ?? 'Přihlášení přes Google selhalo.';
       setState(() {
         _isSubmitting = false;
-        _errorText =
-            widget.store.lastSyncError ?? 'Přihlášení přes Google selhalo.';
+        _isSubmittingGoogle = false;
+        _errorText = msg;
       });
-    }
-  }
-
-  Future<void> _continueAsGuest() async {
-    setState(() {
-      _isSubmitting = true;
-      _errorText = null;
-    });
-    final ok = await widget.store.continueAnonymouslyAsync();
-    if (!mounted) return;
-    if (!ok) {
-      setState(() {
-        _isSubmitting = false;
-        _errorText =
-            widget.store.lastSyncError ?? 'Anonymní vstup se nezdařil.';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
     }
   }
 
@@ -290,33 +281,25 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
                         onPressed: _isSubmitting
                             ? null
                             : withButtonSound(_signInWithGoogle),
-                        icon: const Icon(
-                          Icons.g_mobiledata,
-                          color: _goldAccent,
-                          size: 24,
+                        icon: _isSubmittingGoogle
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: _goldAccent,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.g_mobiledata,
+                                color: _goldAccent,
+                                size: 24,
+                              ),
+                        label: Text(
+                          _isSubmittingGoogle
+                              ? s.authVerifyingSeal
+                              : s.authContinueGoogle,
                         ),
-                        label: Text(s.authContinueGoogle),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: _voidBg,
-                          foregroundColor: _boneText,
-                          side: const BorderSide(color: _gothBorder),
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: _isSubmitting
-                            ? null
-                            : withButtonSound(_continueAsGuest),
-                        icon: const Icon(
-                          Icons.person_outline,
-                          color: _goldAccent,
-                          size: 18,
-                        ),
-                        label: Text(s.authContinueGuest),
                       ),
                     ],
                   ),

@@ -507,9 +507,13 @@ class MansionStore extends ChangeNotifier {
     }
     try {
       final cred = await _gangRepo.signInWithGoogle();
+      if (cred?.user == null) {
+        lastSyncError = 'Přihlášení přes Google bylo zrušeno nebo selhalo.';
+        return false;
+      }
       isSignedIn = true;
-      isAnonymousAuth = cred?.user?.isAnonymous ?? false;
-      authUserEmail = cred?.user?.email;
+      isAnonymousAuth = cred!.user!.isAnonymous;
+      authUserEmail = cred.user!.email;
       await syncFromFirebase();
       notifyListeners();
       return true;
@@ -597,6 +601,10 @@ class MansionStore extends ChangeNotifier {
     bool includeStarterFamily = false,
   }) async {
     lastSyncError = null;
+    if (!isSignedIn) {
+      lastSyncError = 'Nejprve se prosím přihlas.';
+      return false;
+    }
     final cleanGang = gangName.trim().isEmpty
         ? 'Sídlo stínů'
         : gangName.trim();
@@ -619,9 +627,9 @@ class MansionStore extends ChangeNotifier {
     }
 
     try {
-      final user = await _gangRepo.ensureSignedIn();
-      if (user == null) {
-        lastSyncError = 'Nepodařilo se přihlásit k Firebase.';
+      final user = _gangRepo.currentUser;
+      if (user == null || user.isAnonymous) {
+        lastSyncError = 'Pro založení Sídla se musíš přihlásit účtem.';
         return false;
       }
       final inviteCode = _generateInviteCode(_clock());
@@ -678,6 +686,10 @@ class MansionStore extends ChangeNotifier {
     MemberSex sex = MemberSex.male,
   }) async {
     lastSyncError = null;
+    if (!isSignedIn) {
+      lastSyncError = 'Nejprve se prosím přihlas.';
+      return false;
+    }
     final cleanCode = inviteCode.trim().toUpperCase();
     final cleanNick = nickname.trim().isEmpty ? 'Shadow' : nickname.trim();
     if (cleanCode.isEmpty) {
@@ -707,9 +719,9 @@ class MansionStore extends ChangeNotifier {
 
     // 3. Look up and join via Firestore.
     try {
-      final user = await _gangRepo.ensureSignedIn();
-      if (user == null) {
-        lastSyncError = 'Nepodařilo se přihlásit k Firebase.';
+      final user = _gangRepo.currentUser;
+      if (user == null || user.isAnonymous) {
+        lastSyncError = 'Pro vstup do Sídla se musíš přihlásit účtem.';
         return false;
       }
 

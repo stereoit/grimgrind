@@ -18,15 +18,16 @@ void main() {
     await tester.tap(find.text('Přeskočit'));
     await tester.pumpAndSettle();
 
-    // Step 2: Login / Signup gate ("Brána do Sídla")
+    // Step 2: Login / Signup gate ("Brána do Sídla") — guest bypass is disabled
     expect(find.text('BRÁNA DO SÍDLA'), findsOneWidget);
-    final guestButton = find.text('Pokračovat anonymně jako host');
+    expect(find.text('Pokračovat anonymně jako host'), findsNothing);
+    final googleButton = find.text('Pokračovat přes Google');
     await tester.scrollUntilVisible(
-      guestButton,
+      googleButton,
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(guestButton);
+    await tester.tap(googleButton);
     await tester.pumpAndSettle();
 
     // Step 3: Create Avatar
