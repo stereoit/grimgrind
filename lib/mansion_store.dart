@@ -1501,7 +1501,7 @@ class MansionStore extends ChangeNotifier {
       .toList();
 
   int bankCoinsFor(String memberId) =>
-      bankCardsFor(memberId).fold(0, (sum, c) => sum + c.coinsAwarded);
+      bankCardsFor(memberId).fold(0, (acc, c) => acc + c.coinsAwarded);
 
   List<ExchangeRequest> get pendingExchanges =>
       exchangeRequests
@@ -1529,7 +1529,7 @@ class MansionStore extends ChangeNotifier {
     if (cards.isEmpty) return null;
 
     final now = _clock();
-    final totalCoins = cards.fold(0, (sum, c) => sum + c.coinsAwarded);
+    final totalCoins = cards.fold(0, (acc, c) => acc + c.coinsAwarded);
     final reqId = isFirebaseReady
         ? '${now.microsecondsSinceEpoch}_${targetMember.id}_${_idSeq++}'
         : _nextId('ex');
@@ -1576,9 +1576,9 @@ class MansionStore extends ChangeNotifier {
 
     card.status = PlayedCardStatus.rejected;
     req.cardIds.remove(cardId);
-    req.totalCoins = req.cardIds.fold(0, (sum, id) {
+    req.totalCoins = req.cardIds.fold(0, (acc, id) {
       final found = playedCards.firstWhere((c) => c.id == id);
-      return sum + found.coinsAwarded;
+      return acc + found.coinsAwarded;
     });
 
     if (req.cardIds.isEmpty) {
@@ -1627,7 +1627,7 @@ class MansionStore extends ChangeNotifier {
       ..status = ExchangeStatus.approved
       ..approvedAt = now
       ..approvedByNickname = hand.nickname
-      ..totalCoins = approvedCards.fold(0, (sum, c) => sum + c.coinsAwarded);
+      ..totalCoins = approvedCards.fold(0, (acc, c) => acc + c.coinsAwarded);
 
     final requester = members
         .where((m) => m.id == req!.memberId)
@@ -1764,9 +1764,9 @@ class MansionStore extends ChangeNotifier {
         heatLevel: heatLevelFor(member, at: now),
         streakDays: streakDaysFor(member, at: now),
         approvedTaskCount: approved.length,
-        approvedCoins: approved.fold(0, (sum, c) => sum + c.coinsAwarded),
-        approvedMinutes: approved.fold(0, (sum, c) => sum + c.chore.minutes),
-        inBankCoins: inBank.fold(0, (sum, c) => sum + c.coinsAwarded),
+        approvedCoins: approved.fold(0, (acc, c) => acc + c.coinsAwarded),
+        approvedMinutes: approved.fold(0, (acc, c) => acc + c.chore.minutes),
+        inBankCoins: inBank.fold(0, (acc, c) => acc + c.coinsAwarded),
         inBankCount: inBank.length,
       );
     }).toList();
