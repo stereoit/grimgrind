@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit"
+  },
+  "files.associations": {
+    "*.dart": "dart"
+  },
+  "java.configuration.updateBuildConfiguration": "interactive"
+}
