@@ -375,6 +375,35 @@ class MansionStore extends ChangeNotifier {
     return true;
   }
 
+  List<GangMember> membersOf(String gangId) {
+    for (final ws in _workspaces) {
+      if (ws.gang.id == gangId) {
+        return List.unmodifiable(ws.members);
+      }
+    }
+    return const [];
+  }
+
+  bool leaveGang(String gangId) {
+    final index = _workspaces.indexWhere((w) => w.gang.id == gangId);
+    if (index < 0) return false;
+    final target = _workspaces[index];
+    final memberId = target.currentMemberId;
+    _workspaces.removeAt(index);
+    if (_activeGangId == gangId) {
+      _activeGangId = _workspaces.isEmpty ? null : _workspaces.first.gang.id;
+    }
+    if (isFirebaseReady && memberId != null) {
+      unawaited(
+        _gangRepo
+            .leaveGang(gangId: gangId, memberId: memberId)
+            .catchError((_) {}),
+      );
+    }
+    notifyListeners();
+    return true;
+  }
+
   void startSampleMansion() {
     _seedSampleMansion();
     isSignedIn = true;
@@ -803,6 +832,26 @@ class MansionStore extends ChangeNotifier {
     }
     for (final req in exchangeRequests.where((r) => r.memberId == member.id)) {
       req.memberNickname = clean;
+    }
+    notifyListeners();
+  }
+
+  void updateCurrentAvatar({
+    required String nickname,
+    required MemberSex sex,
+  }) {
+    final clean = nickname.trim();
+    if (clean.isNotEmpty) {
+      avatarNickname = clean;
+    }
+    avatarSex = sex;
+    final member = currentMember;
+    if (member != null) {
+      member.sex = sex;
+      if (clean.isNotEmpty && clean != member.nickname) {
+        renameCurrentMember(clean);
+        return;
+      }
     }
     notifyListeners();
   }

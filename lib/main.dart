@@ -964,28 +964,29 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
             ),
             const SizedBox(height: 20),
             SegmentedButton<bool>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: true,
-                  icon: Icon(Icons.front_hand_outlined),
-                  label: Text('Založit Gang'),
+                  icon: const Icon(Icons.castle_outlined),
+                  label: Text(s.createMansionBtn),
                 ),
                 ButtonSegment(
                   value: false,
-                  icon: Icon(Icons.vpn_key_outlined),
-                  label: Text('Mám zvací kód'),
+                  icon: const Icon(Icons.vpn_key_outlined),
+                  label: Text(s.joinMansionBtn),
                 ),
               ],
               selected: {_createMode},
-              onSelectionChanged: (s) => setState(() => _createMode = s.first),
+              onSelectionChanged: (sel) =>
+                  setState(() => _createMode = sel.first),
             ),
             const SizedBox(height: 20),
             if (_createMode) ...[
               TextField(
                 controller: _gangNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Název Gangu / Sídla',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: s.isCs ? 'Název Sídla' : 'Mansion Name',
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
@@ -1031,7 +1032,9 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                             SnackBar(
                               content: Text(
                                 widget.store.lastSyncError ??
-                                    'Nepodařilo se založit Gang.',
+                                    (s.isCs
+                                        ? 'Nepodařilo se založit Sídlo.'
+                                        : 'Failed to create Mansion.'),
                               ),
                             ),
                           );
@@ -1046,10 +1049,10 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
               TextField(
                 controller: _inviteCodeController,
                 textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Zvací kód Gangu',
-                  hintText: 'Např. GRIM-42',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: s.isCs ? 'Zvací kód Sídla' : 'Mansion Invite Code',
+                  hintText: s.isCs ? 'Např. GRIM-42' : 'e.g. GRIM-42',
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 14),
@@ -1084,7 +1087,9 @@ class _GangSetupScreenState extends State<_GangSetupScreen> {
                             SnackBar(
                               content: Text(
                                 widget.store.lastSyncError ??
-                                    'Neplatný zvací kód Gangu.',
+                                    (s.isCs
+                                        ? 'Neplatný zvací kód Sídla.'
+                                        : 'Invalid Mansion invite code.'),
                               ),
                             ),
                           );
@@ -1187,6 +1192,7 @@ class _MansionShellState extends State<MansionShell> {
       ProfileSettingsPage(
         store: store,
         updateService: _updateService,
+        pendingUpdate: _pendingUpdate,
       ),
     ];
 
@@ -1266,9 +1272,9 @@ class _MansionShellState extends State<MansionShell> {
             label: s.navLeaderboard,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: s.navProfile,
+            icon: const Icon(Icons.castle_outlined),
+            selectedIcon: const Icon(Icons.castle),
+            label: s.navMansion,
           ),
         ],
       ),
@@ -2525,7 +2531,7 @@ class _MiniStat extends StatelessWidget {
 }
 
 // =============================================================================
-// Gang & Profile Sheet (Switch active member, invite code, rename)
+// 4. Mansion Tab (Avatar, My Mansions, App Updates)
 // =============================================================================
 
 class ProfileSettingsPage extends StatefulWidget {
@@ -2533,10 +2539,12 @@ class ProfileSettingsPage extends StatefulWidget {
     super.key,
     required this.store,
     this.updateService,
+    this.pendingUpdate,
   });
 
   final MansionStore store;
   final DistributionUpdateService? updateService;
+  final UpdateCheckResult? pendingUpdate;
 
   @override
   State<ProfileSettingsPage> createState() => _ProfileSettingsPageState();
@@ -2544,8 +2552,12 @@ class ProfileSettingsPage extends StatefulWidget {
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   late final TextEditingController _renameController = TextEditingController(
-    text: widget.store.currentMember?.nickname ?? '',
+    text: widget.store.currentMember?.nickname ??
+        widget.store.avatarNickname ??
+        '',
   );
+  late MemberSex _selectedSex =
+      widget.store.currentMember?.sex ?? widget.store.avatarSex;
 
   @override
   void dispose() {
@@ -2556,114 +2568,175 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
+    final theme = ThemeScope.of(context);
     final store = widget.store;
-    final gang = store.gang!;
+    final activeGang = store.gang;
+    final gangs = store.myGangs;
     final updateService = widget.updateService;
+    final pendingUpdate = widget.pendingUpdate;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
-        Text(gang.name, style: const TextStyle(fontSize: 22)),
-        const SizedBox(height: 4),
-        Text(
-          s.inviteCodeLine(gang.inviteCode),
-          style: const TextStyle(color: Color(0xFFC6A15B)),
-        ),
-        if (store.authUserEmail != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            s.accountLine(store.authUserEmail!),
-            style: const TextStyle(color: Color(0xFF968C80), fontSize: 12),
+        // 1. Your Avatar (Nickname & Sex)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF17171A),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF3B3329)),
           ),
-        ],
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: withButtonSound(() {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => MyGangsPage(store: store),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    s.yourAvatarSection,
+                    style: const TextStyle(
+                      color: Color(0xFFC6A15B),
+                      letterSpacing: 1.6,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                }),
-                icon: const Icon(Icons.groups_outlined),
-                label: Text(s.myGangsBtn),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: withButtonSound(() {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          ManageGangPage(store: store, gangId: gang.id),
+                  ),
+                  if (store.authUserEmail != null)
+                    Flexible(
+                      child: Text(
+                        store.authUserEmail!,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF968C80),
+                          fontSize: 11,
+                        ),
+                      ),
                     ),
-                  );
-                }),
-                icon: const Icon(Icons.share_outlined),
-                label: Text(s.inviteManageBtn),
+                ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          s.switchMemberSection,
-          style: const TextStyle(
-            fontSize: 10,
-            letterSpacing: 1.6,
-            color: Color(0xFF968C80),
-          ),
-        ),
-        const SizedBox(height: 8),
-        ...store.members.map((m) {
-          final selected = m.id == store.currentMemberId;
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              selected
-                  ? Icons.radio_button_checked
-                  : Icons.radio_button_off,
-              color: selected
-                  ? const Color(0xFFC6A15B)
-                  : const Color(0xFF968C80),
-            ),
-            title: Text(m.nickname),
-            subtitle: Text(
-              m.isHand ? s.roleHandSubtitle : s.roleMemberSubtitle,
-            ),
-            onTap: () {
-              store.switchActiveMember(m.id);
-              _renameController.text = store.currentMember?.nickname ?? '';
-            },
-          );
-        }),
-        const Divider(),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
+              const SizedBox(height: 12),
+              TextField(
                 controller: _renameController,
                 decoration: InputDecoration(
-                  labelText: s.renameNicknameLabel,
+                  labelText: s.nicknameLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: withButtonSound(
-                () => store.renameCurrentMember(_renameController.text),
+              const SizedBox(height: 12),
+              MemberSexSelector(
+                selected: _selectedSex,
+                onChanged: (sex) => setState(() => _selectedSex = sex),
               ),
-              child: Text(s.saveBtn),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: withButtonSound(() {
+                    store.updateCurrentAvatar(
+                      nickname: _renameController.text,
+                      sex: _selectedSex,
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(s.avatarSavedSnackbar)),
+                    );
+                  }),
+                  icon: const Icon(Icons.save_outlined, size: 17),
+                  label: Text(s.saveBtn),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // 2. My Mansions
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${s.myMansionsSection} (${gangs.length})',
+              style: const TextStyle(
+                color: Color(0xFFC6A15B),
+                letterSpacing: 1.6,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: withButtonSound(
+                    () => showCreateGangDialog(context, store),
+                  ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: Text(s.createMansionBtn),
+                ),
+                TextButton.icon(
+                  onPressed: withButtonSound(
+                    () => showAcceptInviteDialog(context, store),
+                  ),
+                  icon: const Icon(Icons.vpn_key_outlined, size: 15),
+                  label: Text(s.joinMansionBtn),
+                ),
+              ],
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        for (final g in gangs)
+          _MansionListCard(
+            mansion: g,
+            isActive: g.id == activeGang?.id,
+            isOwner: store.isOwnerOf(g.id),
+            memberCount: store.memberCountIn(g.id),
+            imageAsset: theme.onboardingWorldArt,
+            onTap: withButtonSound(() {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ManageGangPage(store: store, gangId: g.id),
+                ),
+              );
+            })!,
+          ),
+
+        // 3. App Updates & Notifications
         if (updateService != null) ...[
           const SizedBox(height: 16),
           const Divider(),
+          if (pendingUpdate != null && pendingUpdate.isUpdateAvailable) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6E1830).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFC6A15B)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.notifications_active_outlined,
+                    color: Color(0xFFC6A15B),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      s.newVersionTitle(
+                        pendingUpdate.info.latestVersion,
+                        pendingUpdate.info.latestBuildNumber,
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: () =>
+                        updateService.openUpdateUrl(pendingUpdate.info),
+                    child: Text(s.updateNowBtn),
+                  ),
+                ],
+              ),
+            ),
+          ],
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(
@@ -2699,6 +2772,134 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _MansionListCard extends StatelessWidget {
+  const _MansionListCard({
+    required this.mansion,
+    required this.isActive,
+    required this.isOwner,
+    required this.memberCount,
+    required this.imageAsset,
+    required this.onTap,
+  });
+
+  final Gang mansion;
+  final bool isActive;
+  final bool isOwner;
+  final int memberCount;
+  final String imageAsset;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF17171A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isActive ? const Color(0xFFC6A15B) : const Color(0xFF3B3329),
+          width: isActive ? 1.5 : 1,
+        ),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFC6A15B).withValues(alpha: 0.14),
+                  blurRadius: 14,
+                ),
+              ]
+            : null,
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  imageAsset,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        if (isActive)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6E1830),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: const Color(0xFFC6A15B),
+                              ),
+                            ),
+                            child: Text(
+                              s.activeMansionBadge,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: Text(
+                            mansion.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${s.membersCountLabel(memberCount)} • ${isOwner ? s.roleHandSubtitle : s.roleMemberSubtitle}',
+                      style: const TextStyle(
+                        color: Color(0xFF968C80),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      mansion.inviteCode,
+                      style: const TextStyle(
+                        color: Color(0xFFC6A15B),
+                        fontSize: 11,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF968C80),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

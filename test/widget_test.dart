@@ -34,9 +34,9 @@ void main() {
     await tester.tap(find.text('Pokračovat do Sídla'));
     await tester.pumpAndSettle();
 
-    // Step 4: Gang setup
-    expect(find.text('Vstup do Gangu'), findsOneWidget);
-    final createButton = find.text('Založit Gang a stát se Rukou');
+    // Step 4: Mansion setup
+    expect(find.text('Vstup do Sídla'), findsOneWidget);
+    final createButton = find.text('Založit Sídlo a stát se Rukou');
     await tester.scrollUntilVisible(
       createButton,
       200,

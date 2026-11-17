@@ -48,7 +48,7 @@ class AppStrings {
   String get navChronicle => isCs ? 'Kronika' : 'Chronicle';
   String get navPouch => isCs ? 'Mešec' : 'Pouch';
   String get navLeaderboard => isCs ? 'Žebříček' : 'Leaderboard';
-  String get navProfile => isCs ? 'Profil' : 'Profile';
+  String get navMansion => isCs ? 'Sídlo' : 'Mansion';
 
   String get deckTitle => isCs ? 'Kniha karet' : 'Deck';
   String get playCardFab => isCs ? 'Zahrát kartu' : 'Play Card';
@@ -90,7 +90,7 @@ class AppStrings {
   }
 
   // ---------------------------------------------------------------------------
-  // Auth Gate & Email Verification & Avatar & Gang Setup
+  // Auth Gate & Email Verification & Avatar & Mansion Setup
   // ---------------------------------------------------------------------------
   String get authEyebrow => isCs ? 'BRÁNA DO SÍDLA' : 'MANSION GATE';
   String get authLoginTitle => isCs ? 'Přihlášení' : 'Sign In';
@@ -125,13 +125,13 @@ class AppStrings {
       isCs ? 'Pokračovat do Sídla' : 'Continue to Mansion';
 
   String get gangSetupTitle =>
-      isCs ? 'Vstup do Gangu' : 'Enter a Gang';
+      isCs ? 'Vstup do Sídla' : 'Enter a Mansion';
   String get gangSetupCreateBtn =>
-      isCs ? 'Založit Gang a stát se Rukou' : 'Create Gang & Become The Hand';
+      isCs ? 'Založit Sídlo a stát se Rukou' : 'Create Mansion & Become The Hand';
   String get gangSetupCreating =>
-      isCs ? 'Zakládám Gang...' : 'Creating Gang...';
+      isCs ? 'Zakládám Sídlo...' : 'Creating Mansion...';
   String get gangSetupJoinBtn =>
-      isCs ? 'Připojit se ke Gangu' : 'Join Gang';
+      isCs ? 'Připojit se k Sídlu' : 'Join Mansion';
   String get gangSetupJoining =>
       isCs ? 'Připojuji se...' : 'Joining...';
   String get gangSetupQuickStart => isCs
@@ -253,14 +253,35 @@ class AppStrings {
       isCs ? 'Leaderboard Hráčů' : 'Player Leaderboard';
 
   // ---------------------------------------------------------------------------
-  // Profile & Settings
+  // Mansion & Settings
   // ---------------------------------------------------------------------------
   String inviteCodeLine(String code) => isCs
-      ? 'Zvací kód pro členy Gangu: $code'
-      : 'Gang invite code: $code';
+      ? 'Zvací kód pro členy Sídla: $code'
+      : 'Mansion invite code: $code';
   String accountLine(String email) =>
       isCs ? 'Účet: $email' : 'Account: $email';
-  String get myGangsBtn => isCs ? 'Moje Gangy' : 'My Gangs';
+  String get yourAvatarSection => isCs ? 'TVŮJ AVATAR' : 'YOUR AVATAR';
+  String get nicknameLabel => isCs ? 'Přezdívka' : 'Nickname';
+  String get sexLabel => isCs ? 'Pohlaví' : 'Sex';
+  String get myMansionsSection => isCs ? 'MOJE SÍDLA' : 'MY MANSIONS';
+  String get createMansionBtn => isCs ? 'Založit Sídlo' : 'Create Mansion';
+  String get joinMansionBtn => isCs ? 'Připojit se' : 'Join Mansion';
+  String get activeMansionBadge => isCs ? 'AKTIVNÍ' : 'ACTIVE';
+  String membersCountLabel(int count) =>
+      isCs ? '$count členů' : '$count Members';
+  String get membersSectionTitle => isCs ? 'ČLENOVÉ SÍDLA' : 'MEMBERS';
+  String get setActiveMansionBtn =>
+      isCs ? 'Nastavit jako aktivní Sídlo' : 'Set as Active Mansion';
+  String get leaveMansionBtn => isCs ? 'Opustit Sídlo' : 'Leave Mansion';
+  String get leaveMansionConfirmTitle =>
+      isCs ? 'Opustit Sídlo?' : 'Leave Mansion?';
+  String leaveMansionConfirmBody(String name) => isCs
+      ? 'Opravdu chceš opustit Sídlo „$name“? Budeš potřebovat nový zvací kód pro návrat.'
+      : 'Are you sure you want to leave "$name"? You will need an invite code to rejoin.';
+  String get deleteMansionBtn => isCs ? 'Smazat Sídlo' : 'Delete Mansion';
+  String get deleteMansionConfirmTitle =>
+      isCs ? 'Opravdu smazat Sídlo?' : 'Delete Mansion?';
+  String get myGangsBtn => isCs ? 'Moje Sídla' : 'My Mansions';
   String get inviteManageBtn =>
       isCs ? 'Pozvat / Správa' : 'Invite / Manage';
   String get switchMemberSection => isCs
@@ -269,10 +290,12 @@ class AppStrings {
   String get roleHandSubtitle =>
       isCs ? 'Zakladatel • Ruka' : 'Founder • The Hand';
   String get roleMemberSubtitle =>
-      isCs ? 'Člen Gangu' : 'Gang Member';
+      isCs ? 'Člen Sídla' : 'Mansion Member';
   String get renameNicknameLabel =>
       isCs ? 'Změnit moji přezdívku' : 'Change my nickname';
   String get saveBtn => isCs ? 'Uložit' : 'Save';
+  String get avatarSavedSnackbar =>
+      isCs ? 'Avatar uložen.' : 'Avatar saved.';
   String get appUpdatesTitle =>
       isCs ? 'Aktualizace aplikace' : 'App Updates';
   String get checkNewVersion =>

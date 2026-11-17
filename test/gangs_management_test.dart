@@ -126,27 +126,43 @@ void main() {
       await tester.pumpWidget(GrimGrindApp(store: store));
       await tester.pumpAndSettle();
 
-      // Open Profil tab from bottom NavigationBar.
+      // Open Sídlo (Mansion) tab from bottom NavigationBar.
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
-          matching: find.text('Profil'),
+          matching: find.text('Sídlo'),
         ),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Moje Gangy'));
-      await tester.pumpAndSettle();
       expect(find.text('Raven Manor'), findsOneWidget);
+      expect(find.text('AKTIVNÍ'), findsOneWidget);
 
-      await tester.tap(find.text('Spravovat'));
+      // Tap the Mansion card to open Mansion Detail & Members.
+      await tester.tap(find.text('Raven Manor'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('https://grim-grind.web.app/join?code='), findsOneWidget);
+      expect(
+        find.textContaining('https://grim-grind.web.app/join?code='),
+        findsOneWidget,
+      );
+      final membersHeader = find.text('ČLENOVÉ SÍDLA (1)');
+      await tester.scrollUntilVisible(
+        membersHeader,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(membersHeader, findsOneWidget);
 
-      // Tap Delete Gang -> confirmation dialog.
-      await tester.tap(find.text('Smazat Gang'));
+      // Tap Delete Mansion -> confirmation dialog.
+      final deleteBtn = find.text('Smazat Sídlo');
+      await tester.scrollUntilVisible(
+        deleteBtn,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(deleteBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Opravdu smazat Gang?'), findsOneWidget);
+      expect(find.text('Opravdu smazat Sídlo?'), findsOneWidget);
 
       // Typing wrong name keeps button disabled.
       await tester.enterText(find.byType(TextField).last, 'Something Else');
@@ -155,14 +171,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.myGangs, hasLength(1));
 
-      // Typing exact name deletes the gang and returns to onboarding.
+      // Typing exact name deletes the Mansion and returns to onboarding.
       await tester.enterText(find.byType(TextField).last, 'Raven Manor');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Trvale smazat'));
       await tester.pumpAndSettle();
 
       expect(store.myGangs, isEmpty);
-      expect(find.text('Vstup do Gangu'), findsOneWidget);
+      expect(find.text('Vstup do Sídla'), findsOneWidget);
     });
 
     testWidgets('AcceptInviteDialog collects Nickname and Sex when joining by code', (
@@ -205,6 +221,54 @@ void main() {
 
       expect(store.currentMember!.nickname, 'Morticia');
       expect(store.currentMember!.sex, MemberSex.female);
+    });
+
+    testWidgets('Mansion tab updates Nickname & Sex and allows leaving a Mansion', (
+      tester,
+    ) async {
+      tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+      addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      final store = MansionStore(clock: () => DateTime(2026, 8, 10, 12, 0));
+      store.createGang(gangName: 'First Manor', founderNickname: 'Hand');
+      store.createGang(gangName: 'Second Manor', founderNickname: 'Hand');
+
+      await tester.pumpWidget(GrimGrindApp(store: store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Mansion'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Update Nickname and Sex in Mansion tab.
+      await tester.enterText(find.byType(TextField).first, 'Gomez');
+      await tester.tap(find.text('Neutrální'));
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(store.currentMember!.nickname, 'Gomez');
+      expect(store.currentMember!.sex, MemberSex.neutral);
+
+      // Tap First Manor and leave it.
+      await tester.tap(find.text('First Manor'));
+      await tester.pumpAndSettle();
+      final leaveBtn = find.text('Leave Mansion');
+      await tester.scrollUntilVisible(
+        leaveBtn,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(leaveBtn);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Leave Mansion').last);
+      await tester.pumpAndSettle();
+
+      expect(store.myGangs, hasLength(1));
+      expect(store.gang!.name, 'Second Manor');
     });
   });
 }

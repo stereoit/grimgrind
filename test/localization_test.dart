@@ -36,7 +36,7 @@ void main() {
       expect(find.text('Chronicle'), findsOneWidget);
       expect(find.text('Pouch'), findsOneWidget);
       expect(find.text('Leaderboard'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
+      expect(find.text('Mansion'), findsOneWidget);
       expect(find.text('Play Card'), findsOneWidget);
 
       await tester.tap(find.text('Pouch'));
@@ -56,7 +56,7 @@ void main() {
       expect(find.text('Kronika'), findsOneWidget);
       expect(find.text('Mešec'), findsOneWidget);
       expect(find.text('Žebříček'), findsOneWidget);
-      expect(find.text('Profil'), findsOneWidget);
+      expect(find.text('Sídlo'), findsOneWidget);
       expect(find.text('Zahrát kartu'), findsOneWidget);
 
       await tester.tap(find.text('Mešec'));

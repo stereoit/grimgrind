@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'app_strings.dart';
 import 'mansion_store.dart';
 import 'models.dart';
 import 'sound_service.dart';
@@ -343,7 +344,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               ),
               SizedBox(height: 2),
               Text(
-                'Přijmout pozvánku do Gangu',
+                'Přijmout pozvánku do Sídla',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
@@ -432,7 +433,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
               ),
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Tvoje přezdívka v tomto Gangu',
+              labelText: 'Tvoje přezdívka v tomto Sídle',
               hintText: 'Např. Shadow Master',
               suffixIcon: Icon(
                 Icons.badge_outlined,
@@ -485,7 +486,7 @@ class _AcceptInviteDialogState extends State<_AcceptInviteDialog> {
                             setState(() {
                               _isSubmitting = false;
                               _errorText = widget.store.lastSyncError ??
-                                  'Neplatný zvací kód Gangu.';
+                                  'Neplatný zvací kód Sídla.';
                             });
                             return;
                           }
@@ -560,13 +561,13 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
               ),
               SizedBox(height: 4),
               Text(
-                'Založit nový Gang',
+                'Založit nové Sídlo',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 4),
               Text(
-                'Vytvořte nové bratrstvo sídla. Stanete se Rukou a pánem nad pravidly pokladnice.',
+                'Vytvořte nové panství sídla. Stanete se Rukou a pánem nad pravidly pokladnice.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: _mutedStone, fontSize: 12),
               ),
@@ -580,7 +581,7 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
             decoration: const InputDecoration(
               filled: true,
               fillColor: _voidBg,
-              labelText: 'Název Gangu / Sídla',
+              labelText: 'Název Sídla',
               hintText: 'Např. Sídlo Havranů',
               suffixIcon: Icon(
                 Icons.domain_outlined,
@@ -663,7 +664,7 @@ class _CreateGangDialogState extends State<_CreateGangDialog> {
                             setState(() {
                               _isSubmitting = false;
                               _errorText = widget.store.lastSyncError ??
-                                  'Nepodařilo se založit Gang.';
+                                  'Nepodařilo se založit Sídlo.';
                             });
                             return;
                           }
@@ -708,7 +709,7 @@ class MyGangsPage extends StatelessWidget {
                     fontSize: 10,
                   ),
                 ),
-                Text('Moje Gangy', style: TextStyle(fontSize: 20)),
+                Text('Moje Sídla', style: TextStyle(fontSize: 20)),
               ],
             ),
           ),
@@ -721,7 +722,7 @@ class MyGangsPage extends StatelessWidget {
                     child: _BloodWineButton(
                       onPressed: () => showCreateGangDialog(context, store),
                       icon: Icons.castle_outlined,
-                      label: 'Založit Gang',
+                      label: 'Založit Sídlo',
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -781,7 +782,7 @@ class MyGangsPage extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
-                      'Zatím nejsi členem žádného Gangu.',
+                      'Zatím nejsi členem žádného Sídla.',
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1095,15 +1096,27 @@ class ManageGangPage extends StatelessWidget {
         );
         if (gang == null) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Správa Gangu')),
-            body: const Center(child: Text('Gang byl smazán.')),
+            appBar: AppBar(title: Text(AppStrings.of(context).navMansion)),
+            body: Center(
+              child: Text(
+                AppStrings.of(context).isCs
+                    ? 'Sídlo bylo smazáno.'
+                    : 'Mansion was deleted.',
+              ),
+            ),
           );
         }
 
+        final s = AppStrings.of(context);
+        final theme = ThemeScope.of(context);
         final isOwner = store.isOwnerOf(gangId);
-        final inviteMessage =
-            'Přidej se do mého Gangu „${gang.name}“ v GrimGrind! '
-            'Otevři odkaz: ${gang.inviteUrl} (nebo zadej kód ${gang.inviteCode}).';
+        final isActive = store.gang?.id == gangId;
+        final members = store.membersOf(gangId);
+        final inviteMessage = s.isCs
+            ? 'Přidej se do mého Sídla „${gang.name}“ v GrimGrind! '
+                'Otevři odkaz: ${gang.inviteUrl} (nebo zadej kód ${gang.inviteCode}).'
+            : 'Join my Mansion "${gang.name}" in GrimGrind! '
+                'Open link: ${gang.inviteUrl} (or enter code ${gang.inviteCode}).';
 
         return Scaffold(
           appBar: AppBar(
@@ -1157,6 +1170,100 @@ class ManageGangPage extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: _coalSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isActive ? _goldAccent : _gothBorder,
+                    width: isActive ? 1.5 : 1,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Stack(
+                      children: [
+                        Image.asset(
+                          theme.onboardingWorldArt,
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? _bloodWine
+                                  : _voidBg.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: isActive ? _goldAccent : _gothBorder,
+                              ),
+                            ),
+                            child: Text(
+                              isActive
+                                  ? s.activeMansionBadge
+                                  : (s.isCs ? 'NEAKTIVNÍ' : 'INACTIVE'),
+                              style: TextStyle(
+                                color: isActive ? _boneText : _mutedStone,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            gang.name,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            s.membersCountLabel(members.length),
+                            style: const TextStyle(
+                              color: _mutedStone,
+                              fontSize: 12,
+                            ),
+                          ),
+                          if (!isActive) ...[
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              onPressed: withButtonSound(() {
+                                store.switchGang(gangId);
+                              }),
+                              icon: const Icon(
+                                Icons.castle_outlined,
+                                size: 17,
+                                color: _goldAccent,
+                              ),
+                              label: Text(s.setActiveMansionBtn),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1300,73 +1407,237 @@ class ManageGangPage extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isOwner) ...[
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _coalSurface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _bloodWine, width: 1.2),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber_rounded,
-                                color: _bloodWine,
-                                size: 17,
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _coalSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _gothBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${s.membersSectionTitle} (${members.length})',
+                          style: const TextStyle(
+                            color: _goldAccent,
+                            letterSpacing: 1.6,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.groups_outlined,
+                          color: _goldAccent,
+                          size: 17,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    for (final member in members)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _voidBg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: member.id == gang.founderId
+                                ? _goldAccent.withValues(alpha: 0.45)
+                                : _gothBorder,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              switch (member.sex) {
+                                MemberSex.male => Icons.male,
+                                MemberSex.female => Icons.female,
+                                MemberSex.neutral => Icons.person_outline,
+                              },
+                              size: 18,
+                              color: member.isHand ? _goldAccent : _mutedStone,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    member.nickname,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    member.isHand
+                                        ? s.roleHandSubtitle
+                                        : s.roleMemberSubtitle,
+                                    style: const TextStyle(
+                                      color: _mutedStone,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(width: 6),
-                              Text(
-                                'NEBEZPEČNÁ ZÓNA',
-                                style: TextStyle(
-                                  color: _bloodBorder,
-                                  letterSpacing: 1.6,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                            ),
+                            if (member.isHand)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _bloodWine.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: _bloodBorder),
+                                ),
+                                child: Text(
+                                  s.isCs ? 'RUKA' : 'THE HAND',
+                                  style: const TextStyle(
+                                    color: _goldAccent,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                          Text(
-                            'POUZE RUKA',
-                            style: TextStyle(color: _mutedStone, fontSize: 10),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Smazáním Gangu trvale odstraníš celé sídlo, kroniku, karty v Banku i všechny členy. Tato akce je nevratná.',
-                        style: TextStyle(color: _mutedStone, fontSize: 12),
-                      ),
-                      const SizedBox(height: 14),
-                      _BloodWineButton(
-                        onPressed: () =>
-                            _showDeleteGangDialog(context, store, gang),
-                        icon: Icons.delete_forever_outlined,
-                        label: 'Smazat Gang',
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
+              ),
               const SizedBox(height: 16),
               _ThemePackageCard(
                 store: store,
                 gang: gang,
                 isOwner: isOwner,
               ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _coalSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _bloodWine, width: 1.2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: _bloodWine,
+                              size: 17,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              s.isCs ? 'NEBEZPEČNÁ ZÓNA' : 'DANGER ZONE',
+                              style: const TextStyle(
+                                color: _bloodBorder,
+                                letterSpacing: 1.6,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          isOwner
+                              ? (s.isCs ? 'VLASTNÍK' : 'OWNER')
+                              : (s.isCs ? 'ČLEN' : 'MEMBER'),
+                          style: const TextStyle(
+                            color: _mutedStone,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _boneText,
+                        side: const BorderSide(color: _gothBorder),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: withButtonSound(
+                        () => _showLeaveMansionDialog(context, store, gang),
+                      ),
+                      icon: const Icon(Icons.logout_outlined, size: 17),
+                      label: Text(s.leaveMansionBtn),
+                    ),
+                    if (isOwner) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        s.isCs
+                            ? 'Smazáním Sídla trvale odstraníš celé panství, kroniku, karty v Mešci i všechny členy. Tato akce je nevratná.'
+                            : 'Deleting the Mansion permanently removes the household, chronicle, pouch cards, and all members. This cannot be undone.',
+                        style: const TextStyle(color: _mutedStone, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      _BloodWineButton(
+                        onPressed: () =>
+                            _showDeleteGangDialog(context, store, gang),
+                        icon: Icons.delete_forever_outlined,
+                        label: s.deleteMansionBtn,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _showLeaveMansionDialog(
+    BuildContext context,
+    MansionStore store,
+    Gang gang,
+  ) async {
+    final s = AppStrings.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.leaveMansionConfirmTitle),
+        content: Text(s.leaveMansionConfirmBody(gang.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.isCs ? 'Zrušit' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.leaveMansionBtn),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      final ok = store.leaveGang(gang.id);
+      if (ok && context.mounted) {
+        if (store.myGangs.isEmpty) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } else {
+          Navigator.pop(context);
+        }
+      }
+    }
   }
 
   Future<void> _showDeleteGangDialog(
@@ -1435,14 +1706,16 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Opravdu smazat Gang?',
+              Text(
+                AppStrings.of(context).deleteMansionConfirmTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
-                'Tato akce trvale smaže „${widget.gang.name}“ včetně všech karet a historie. Pro potvrzení napiš přesný název Gangu:',
+                AppStrings.of(context).isCs
+                    ? 'Tato akce trvale smaže „${widget.gang.name}“ včetně všech karet a historie. Pro potvrzení napiš přesný název Sídla:'
+                    : 'This permanently deletes "${widget.gang.name}" including all cards and history. Type the exact Mansion name to confirm:',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: _mutedStone, fontSize: 12),
               ),
@@ -1475,14 +1748,20 @@ class _DeleteGangDialogState extends State<_DeleteGangDialog> {
                     ),
                   ),
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Ponechat Gang'),
+                  child: Text(
+                    AppStrings.of(context).isCs
+                        ? 'Ponechat Sídlo'
+                        : 'Keep Mansion',
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _BloodWineButton(
                   icon: Icons.delete_forever_outlined,
-                  label: 'Trvale smazat',
+                  label: AppStrings.of(context).isCs
+                      ? 'Trvale smazat'
+                      : 'Delete Forever',
                   onPressed: matches
                       ? () {
                           final ok = widget.store.deleteGang(
@@ -1530,7 +1809,7 @@ class _ThemePackageCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'TÉMA / MOTIV GANGU',
+                'TÉMA / MOTIV SÍDLA',
                 style: TextStyle(
                   color: _goldAccent,
                   letterSpacing: 1.6,
@@ -1548,7 +1827,7 @@ class _ThemePackageCard extends StatelessWidget {
           Text(
             isOwner
                 ? 'Vlastník může pro nové období zvolit balíček tématu. Výchozím tématem je Gothic Mansion.'
-                : 'Aktivní téma nastavené vlastníkem Gangu.',
+                : 'Aktivní téma nastavené vlastníkem Sídla.',
             style: const TextStyle(color: _mutedStone, fontSize: 12),
           ),
           const SizedBox(height: 12),

@@ -223,6 +223,26 @@ class FirebaseGangRepository {
     await _db.collection('gangs').doc(gangId).delete();
   }
 
+  Future<void> leaveGang({
+    required String gangId,
+    required String memberId,
+  }) async {
+    final user = currentUser;
+    if (!isFirebaseReady || user == null) return;
+    await _db
+        .collection('users')
+        .doc(user.uid)
+        .collection('gangs')
+        .doc(gangId)
+        .delete();
+    await _db
+        .collection('gangs')
+        .doc(gangId)
+        .collection('members')
+        .doc(memberId)
+        .delete();
+  }
+
   Future<Map<String, dynamic>?> fetchGang(String gangId) async {
     if (!isFirebaseReady) return null;
     final doc = await _db.collection('gangs').doc(gangId).get();
