@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'app_strings.dart';
 import 'features/mansion/mansion_shell.dart';
 import 'features/onboarding/onboarding_flow.dart';
+import 'features/onboarding/splash_screen.dart';
 import 'mansion_store.dart';
 import 'sound_service.dart';
 import 'theme_package.dart';
@@ -23,10 +24,16 @@ Future<void> main() async {
 }
 
 class GrimGrindApp extends StatefulWidget {
-  const GrimGrindApp({super.key, this.store, this.updateService});
+  const GrimGrindApp({
+    super.key,
+    this.store,
+    this.updateService,
+    this.showSplash,
+  });
 
   final MansionStore? store;
   final DistributionUpdateService? updateService;
+  final bool? showSplash;
 
   @override
   State<GrimGrindApp> createState() => _GrimGrindAppState();
@@ -34,6 +41,7 @@ class GrimGrindApp extends StatefulWidget {
 
 class _GrimGrindAppState extends State<GrimGrindApp> {
   late final MansionStore store = widget.store ?? MansionStore();
+  late bool _showingSplash = widget.showSplash ?? (widget.store == null);
 
   @override
   void initState() {
@@ -70,12 +78,21 @@ class _GrimGrindAppState extends State<GrimGrindApp> {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            home: !store.isReady
-                ? OnboardingFlow(store: store)
-                : MansionShell(
-                    store: store,
-                    updateService: widget.updateService,
-                  ),
+            home: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              child: _showingSplash
+                  ? SplashScreen(
+                      key: const ValueKey('splash'),
+                      onFinished: () => setState(() => _showingSplash = false),
+                    )
+                  : !store.isReady
+                      ? OnboardingFlow(key: const ValueKey('onboarding'), store: store)
+                      : MansionShell(
+                          key: const ValueKey('shell'),
+                          store: store,
+                          updateService: widget.updateService,
+                        ),
+            ),
           ),
         );
       },

@@ -107,22 +107,11 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
               children: [
                 Column(
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _coalSurface,
-                        border: Border.all(
-                          color: _goldAccent.withValues(alpha: 0.7),
-                          width: 1.4,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.vpn_key_outlined,
-                        color: _goldAccent,
-                        size: 28,
-                      ),
+                    Image.asset(
+                      'assets/branding/splash_mark.png',
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 14),
                     Text(
